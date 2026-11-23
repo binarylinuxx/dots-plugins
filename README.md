@@ -10,6 +10,7 @@ Everything here is reviewed before it's merged.
 | ![](plugins/dev.blxshell.sysmon/screenshot.png) | [System monitor](plugins/dev.blxshell.sysmon) | CPU, memory or temperature, with a usage ring that turns red past a threshold |
 | ![](plugins/dev.blxshell.netspeed/screenshot.png) | [Network speed](plugins/dev.blxshell.netspeed) | Live download and upload rates of the active connection |
 | ![](plugins/dev.blxshell.pomodoro/screenshot.png) | [Pomodoro](plugins/dev.blxshell.pomodoro) | A focus timer with breaks, a countdown ring and notifications |
+| ![](plugins/dev.blxshell.desktop/screenshot.png) | [Desktop icons](plugins/dev.blxshell.desktop) | The files in your desktop folder as icons on the wallpaper, each with a popup of actions |
 
 ## Installing
 
@@ -41,7 +42,13 @@ middle click to reset, scroll while stopped to change the focus length. For a
 keybind: `blxshell plugin call dev.blxshell.pomodoro toggle` (also `start`,
 `pause`, `skip`, `reset`).
 
-All three are Python 3 with nothing but the standard library.
+**Desktop icons**: shows what's in your desktop folder (`~/Desktop`, or any
+folder set in its settings) on the wallpaper, with file-type icons, image
+thumbnails and app launchers. Click an icon for its actions: Open, Open with
+another app, Show in folder, Copy path, Move to trash (Run for launchers).
+Double-click opens it. Needs a blxshell with desktop item support.
+
+All four are Python 3 with nothing but the standard library.
 
 ## Layout
 

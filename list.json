@@ -4,6 +4,7 @@
   "packages": [
     { "id": "dev.blxshell.sysmon", "path": "plugins/dev.blxshell.sysmon" },
     { "id": "dev.blxshell.netspeed", "path": "plugins/dev.blxshell.netspeed" },
-    { "id": "dev.blxshell.pomodoro", "path": "plugins/dev.blxshell.pomodoro" }
+    { "id": "dev.blxshell.pomodoro", "path": "plugins/dev.blxshell.pomodoro" },
+    { "id": "dev.blxshell.desktop", "path": "plugins/dev.blxshell.desktop" }
   ]
 }

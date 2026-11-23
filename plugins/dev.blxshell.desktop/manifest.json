@@ -1,0 +1,89 @@
+{
+  "$schema": "https://raw.githubusercontent.com/binarylinuxx/dots/main/schemas/manifest.schema.json",
+  "schema": 1,
+  "type": "plugin",
+  "id": "dev.blxshell.desktop",
+  "name": "Desktop icons",
+  "version": "1.0.0",
+  "description": "The files in your desktop folder as icons on the wallpaper. Click one for its actions: open, open with another app, show in folder, copy path, move to trash.",
+  "authors": [
+    {
+      "name": "binarylinuxx",
+      "url": "https://github.com/binarylinuxx"
+    }
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/binarylinuxx/dots-plugins",
+  "tags": [
+    "desktop",
+    "files",
+    "icons"
+  ],
+  "previews": [
+    "screenshot.png"
+  ],
+  "blxshell": ">=0.1.0",
+  "compositors": [
+    "any"
+  ],
+  "plugin": {
+    "api": 1,
+    "exec": [
+      "bin/desktop.py"
+    ],
+    "restart": "on-failure",
+    "permissions": [
+      "filesystem",
+      "spawn"
+    ],
+    "desktop": [
+      {
+        "id": "files",
+        "name": "Desktop files",
+        "description": "Click: actions. Double-click: open."
+      }
+    ],
+    "commands": [
+      "refresh",
+      "open-folder"
+    ],
+    "settings": [
+      {
+        "key": "folder",
+        "type": "string",
+        "label": "Folder",
+        "description": "Empty uses your desktop folder (~/Desktop)",
+        "default": ""
+      },
+      {
+        "key": "sort",
+        "type": "choice",
+        "label": "Sort by",
+        "choices": [
+          "name",
+          "modified",
+          "type"
+        ],
+        "default": "name"
+      },
+      {
+        "key": "folders_first",
+        "type": "bool",
+        "label": "Folders first",
+        "default": true
+      },
+      {
+        "key": "show_hidden",
+        "type": "bool",
+        "label": "Show hidden files",
+        "default": false
+      },
+      {
+        "key": "other_apps",
+        "type": "number",
+        "label": "“Open with” apps per file",
+        "default": 4
+      }
+    ]
+  }
+}
