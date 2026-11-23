@@ -1,0 +1,91 @@
+{
+  "$schema": "https://raw.githubusercontent.com/binarylinuxx/dots/main/schemas/manifest.schema.json",
+  "schema": 1,
+  "type": "plugin",
+  "id": "dev.blxshell.pomodoro",
+  "name": "Pomodoro",
+  "version": "1.0.0",
+  "description": "A focus timer: work, short breaks, a long break every few rounds, with a countdown ring and notifications.",
+  "authors": [
+    {
+      "name": "binarylinuxx",
+      "url": "https://github.com/binarylinuxx"
+    }
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/binarylinuxx/dots-plugins",
+  "tags": [
+    "productivity",
+    "timer",
+    "focus"
+  ],
+  "previews": [
+    "screenshot.png"
+  ],
+  "blxshell": ">=0.1.0",
+  "compositors": [
+    "any"
+  ],
+  "plugin": {
+    "api": 1,
+    "exec": [
+      "bin/pomodoro.py"
+    ],
+    "restart": "on-failure",
+    "permissions": [
+      "notifications"
+    ],
+    "barModules": [
+      {
+        "id": "timer",
+        "name": "Pomodoro timer",
+        "description": "Click: start or pause. Right click: skip. Middle click: reset. Scroll: focus length."
+      }
+    ],
+    "commands": [
+      "toggle",
+      "start",
+      "pause",
+      "skip",
+      "reset"
+    ],
+    "settings": [
+      {
+        "key": "focus",
+        "type": "number",
+        "label": "Focus (minutes)",
+        "default": 25
+      },
+      {
+        "key": "short_break",
+        "type": "number",
+        "label": "Short break (minutes)",
+        "default": 5
+      },
+      {
+        "key": "long_break",
+        "type": "number",
+        "label": "Long break (minutes)",
+        "default": 15
+      },
+      {
+        "key": "rounds",
+        "type": "number",
+        "label": "Rounds before a long break",
+        "default": 4
+      },
+      {
+        "key": "auto_start",
+        "type": "bool",
+        "label": "Start the next phase on its own",
+        "default": false
+      },
+      {
+        "key": "notify",
+        "type": "bool",
+        "label": "Notify when a phase ends",
+        "default": true
+      }
+    ]
+  }
+}

@@ -1,0 +1,75 @@
+{
+  "$schema": "https://raw.githubusercontent.com/binarylinuxx/dots/main/schemas/manifest.schema.json",
+  "schema": 1,
+  "type": "plugin",
+  "id": "dev.blxshell.netspeed",
+  "name": "Network speed",
+  "version": "1.0.0",
+  "description": "Live download and upload rates of the active connection.",
+  "authors": [
+    {
+      "name": "binarylinuxx",
+      "url": "https://github.com/binarylinuxx"
+    }
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/binarylinuxx/dots-plugins",
+  "tags": [
+    "network",
+    "system"
+  ],
+  "previews": [
+    "screenshot.png"
+  ],
+  "blxshell": ">=0.1.0",
+  "compositors": [
+    "any"
+  ],
+  "plugin": {
+    "api": 1,
+    "exec": [
+      "bin/netspeed.py"
+    ],
+    "restart": "on-failure",
+    "permissions": [],
+    "barModules": [
+      {
+        "id": "speed",
+        "name": "Network speed",
+        "description": "Click or scroll: both, download, upload. Right click: bytes or bits."
+      }
+    ],
+    "settings": [
+      {
+        "key": "interface",
+        "type": "string",
+        "label": "Interface",
+        "description": "Empty follows the default route, e.g. wlan0",
+        "default": ""
+      },
+      {
+        "key": "interval",
+        "type": "number",
+        "label": "Update every (s)",
+        "default": 1
+      },
+      {
+        "key": "units",
+        "type": "choice",
+        "label": "Units",
+        "choices": [
+          "bytes",
+          "bits"
+        ],
+        "default": "bytes"
+      },
+      {
+        "key": "hide_idle",
+        "type": "bool",
+        "label": "Hide when idle",
+        "description": "Under 1 kB/s both ways",
+        "default": false
+      }
+    ]
+  }
+}
