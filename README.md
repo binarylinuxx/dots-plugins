@@ -13,13 +13,14 @@ Everything here is reviewed before it's merged.
 
 ## Installing
 
-Until blxshell reads this repository by itself, make a package from a folder
-and install it:
+Every package here is built in CI and published to the
+[`packages` release](https://github.com/binarylinuxx/dots-plugins/releases/tag/packages),
+so blxshell installs them prebuilt:
 
 ```sh
-git clone https://github.com/binarylinuxx/dots-plugins
-blxshell pack dots-plugins/plugins/dev.blxshell.pomodoro -o pomodoro.blx
-blxshell install pomodoro.blx
+blxshell search
+blxshell install dev.blxshell.pomodoro
+blxshell update
 ```
 
 Then turn it on in **Settings → Plugins**, and place its module in the bar
@@ -53,6 +54,7 @@ plugins/<id>/                    one folder per plugin: what its .blx holds
 themes/<id>/                     one folder per theme
 schema/manifest.schema.json      the manifest format (from blxshell)
 tools/validate.py                the checks CI runs
+tools/build.py                   builds every package into build/ with index.json
 ```
 
 `list.json` lists each package's `id` and `path`. Everything else comes from
@@ -73,7 +75,8 @@ the package's own `manifest.json`. The format is described on the
    blxshell pack plugins/io.github.you.weather
    ```
 
-5. Open a pull request.
+5. Open a pull request. Once it's merged, CI builds it and `blxshell install <id>`
+   gets it.
 
 Reviewers look at:
 
