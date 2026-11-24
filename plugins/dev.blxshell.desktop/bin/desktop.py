@@ -5,7 +5,7 @@ Click an icon for its actions: open it, open it with another app, show it in
 its folder, copy its path, move it to the trash. Double-click opens it.
 .desktop launchers show their app's name and icon and run it.
 
-blxshell plugin protocol, api 1: JSON lines on stdin (from the shell) and
+blxshell plugin protocol, api 2: JSON lines on stdin (from the shell) and
 stdout (to the shell). Exits when stdin closes.
 """
 import configparser
@@ -392,8 +392,8 @@ def main():
         except ValueError:
             continue
         kind = message.get("type")
-        if kind in ("hello", "settings"):
-            apply_settings(message.get("settings") or {})
+        if kind in ("hello", "store"):
+            apply_settings(message.get("store") or {})
             if not started:
                 started = True
                 threading.Thread(target=watcher, daemon=True).start()

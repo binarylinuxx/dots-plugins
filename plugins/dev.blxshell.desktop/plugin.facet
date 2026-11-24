@@ -1,0 +1,37 @@
+// Desktop icons: bin/desktop.py puts your desktop folder's files on the
+// wallpaper (as desktop items) and runs their actions. This file is its page
+// in Settings. The store keeps: folder, sort, folders_first, show_hidden,
+// other_apps.
+let [ vw.ui as ui, vw.layout as layout ] in
+
+view Settings(state, actions) {
+    let other_apps = actions.get("other_apps", 4)
+    layout.Column(gap: 16, width: state.width, align: start) {
+        ui.Text(text: "Folder (empty uses your desktop folder, ~/Desktop)", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.TextField(id: "desktop-folder", value: actions.get("folder", ""), placeholder: "~/Desktop",
+                     width: state.width, height: 42, radius: 14,
+                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
+                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
+                     on_change: (text) => actions.set("folder", text))
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Sort by", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Dropdown(id: "desktop-sort", options: ["name", "modified", "type"], value: actions.get("sort", "name"), width: 160,
+                        color: state.colours.surfaceContainerHighest, text_color: state.colours.text,
+                        on_change: (picked) => actions.set("sort", picked))
+        }
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Folders first", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Toggle(id: "desktop-folders", value: actions.get("folders_first", true), color: state.colours.primary,
+                      on_change: (on) => actions.set("folders_first", on))
+        }
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Show hidden files", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Toggle(id: "desktop-hidden", value: actions.get("show_hidden", false), color: state.colours.primary,
+                      on_change: (on) => actions.set("show_hidden", on))
+        }
+        ui.Text(text: "“Open with” apps per file: " + other_apps, font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "desktop-apps", value: other_apps, min: 0, max: 8, step: 1, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("other_apps", value))
+    }
+}

@@ -48,7 +48,8 @@ thumbnails and app launchers. Click an icon for its actions: Open, Open with
 another app, Show in folder, Copy path, Move to trash (Run for launchers).
 Double-click opens it. Needs a blxshell with desktop item support.
 
-All four are Python 3 with nothing but the standard library.
+Each one draws itself in Facet (`plugin.facet`) on a small Python backend
+using only the standard library. Their READMEs list the controls.
 
 ## Layout
 
@@ -67,6 +68,16 @@ tools/build.py                   builds every package into build/ with index.jso
 `list.json` lists each package's `id` and `path`. Everything else comes from
 the package's own `manifest.json`. The format is described on the
 [wiki](https://bshell.zapzig.org/plugins/discover/).
+
+## Writing a plugin
+
+A plugin draws its UI in [Facet](https://github.com/binarylinuxx/vw/tree/main/facet):
+views named `Bar…` are bar modules and a `Settings` view is its page in the
+settings app. A process in any language can sit behind the views, and C++ is
+possible when Facet isn't enough. The manifest only says who it is and what it
+may do. The full reference is blxshell's
+[docs/packages.md](https://github.com/binarylinuxx/dots/blob/main/docs/packages.md);
+the four plugins here are working examples.
 
 ## Submitting a plugin or theme
 

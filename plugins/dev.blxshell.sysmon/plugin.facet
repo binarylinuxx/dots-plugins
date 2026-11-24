@@ -1,0 +1,66 @@
+// System monitor: CPU, memory or temperature, with a usage ring.
+// bin/sysmon.py measures (state.backend); this file draws it and handles input.
+// The store keeps: metric, detail, ring, warn, warn_temp, interval.
+let [ vw.ui as ui, vw.layout as layout ] in
+
+view Bar(state, actions) {
+    let metric = actions.get("metric", "cpu")
+    let detail = actions.get("detail", false)
+    let warn = actions.get("warn", 85)
+    let warn_temp = actions.get("warn_temp", 85)
+    let next = metric == "cpu" ? "memory" : (metric == "memory" ? "temperature" : "cpu")
+    let previous = metric == "cpu" ? "temperature" : (metric == "memory" ? "cpu" : "memory")
+    if state.ready {
+        let data = state.backend
+        let value = metric == "memory" ? data.memory : (metric == "temperature" ? data.temperature : data.cpu)
+        let hot = metric == "temperature" ? value >= warn_temp : value >= warn
+        let tone = hot ? state.colours.error : state.colours.primary
+        let text = metric == "memory" ? (detail ? data.memory_detail : data.memory_text)
+                 : (metric == "temperature" ? (detail ? data.temperature_detail : data.temperature_text)
+                 : (detail ? data.load : data.cpu_text))
+        let icon = metric == "memory" ? "memory_alt" : (metric == "temperature" ? "device_thermostat" : "developer_board")
+        Native(name: Pill, color: state.colours.surfaceContainer,
+               on_click: () => actions.set("detail", !detail),
+               on_right_click: () => actions.run("dashboard toggle"),
+               on_scroll: (event) => actions.set("metric", (event.delta > 0 ? next : previous))) {
+            if actions.get("ring", true) {
+                Native(name: Ring, progress: (value / 100), size: 22, stroke: 2, color: tone)
+            }
+            Native(name: Icon, glyph: icon, size: 18, color: tone)
+            ui.Text(text: text, font: state.fonts.text, size: 13, weight: medium,
+                    color: hot ? state.colours.error : state.colours.text)
+        }
+    }
+}
+
+view Settings(state, actions) {
+    let metric = actions.get("metric", "cpu")
+    let interval = actions.get("interval", 2)
+    let warn = actions.get("warn", 85)
+    let warn_temp = actions.get("warn_temp", 85)
+    layout.Column(gap: 16, width: state.width, align: start) {
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Show", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Dropdown(id: "sysmon-metric", options: ["cpu", "memory", "temperature"], value: metric, width: 180,
+                        color: state.colours.surfaceContainerHighest, text_color: state.colours.text,
+                        on_change: (picked) => actions.set("metric", picked))
+        }
+        ui.Text(text: "Update every " + interval + " s", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "sysmon-interval", value: interval, min: 0.5, max: 10, step: 0.5, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("interval", value))
+        ui.Text(text: "CPU and memory turn red above " + warn + "%", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "sysmon-warn", value: warn, min: 50, max: 100, step: 1, width: state.width,
+                  color: state.colours.error, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("warn", value))
+        ui.Text(text: "Temperature turns red above " + warn_temp + "°C", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "sysmon-warn-temp", value: warn_temp, min: 50, max: 110, step: 1, width: state.width,
+                  color: state.colours.error, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("warn_temp", value))
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Usage ring around the icon", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Toggle(id: "sysmon-ring", value: actions.get("ring", true), color: state.colours.primary,
+                      on_change: (on) => actions.set("ring", on))
+        }
+    }
+}

@@ -24,6 +24,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+      # Native (C++) plugins' build.sh can build in blxshell's own dev shell:
+      #   nix develop github:binarylinuxx/dots -c cmake …
+      - uses: cachix/install-nix-action@v31
       - run: pip install jsonschema
       - run: python3 tools/validate.py
       - run: python3 tools/build.py --out build

@@ -27,7 +27,8 @@
     "any"
   ],
   "plugin": {
-    "api": 1,
+    "api": 2,
+    "facet": "plugin.facet",
     "exec": [
       "bin/desktop.py"
     ],
@@ -35,55 +36,6 @@
     "permissions": [
       "filesystem",
       "spawn"
-    ],
-    "desktop": [
-      {
-        "id": "files",
-        "name": "Desktop files",
-        "description": "Click: actions. Double-click: open."
-      }
-    ],
-    "commands": [
-      "refresh",
-      "open-folder"
-    ],
-    "settings": [
-      {
-        "key": "folder",
-        "type": "string",
-        "label": "Folder",
-        "description": "Empty uses your desktop folder (~/Desktop)",
-        "default": ""
-      },
-      {
-        "key": "sort",
-        "type": "choice",
-        "label": "Sort by",
-        "choices": [
-          "name",
-          "modified",
-          "type"
-        ],
-        "default": "name"
-      },
-      {
-        "key": "folders_first",
-        "type": "bool",
-        "label": "Folders first",
-        "default": true
-      },
-      {
-        "key": "show_hidden",
-        "type": "bool",
-        "label": "Show hidden files",
-        "default": false
-      },
-      {
-        "key": "other_apps",
-        "type": "number",
-        "label": "“Open with” apps per file",
-        "default": 4
-      }
     ]
   }
 }

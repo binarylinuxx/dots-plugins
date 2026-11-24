@@ -124,11 +124,17 @@ def check_package(entry, validator):
     named = list(manifest.get("previews", []))
     if manifest.get("icon"):
         named.append(manifest["icon"])
-    program = (manifest.get("plugin") or {}).get("exec") or []
+    plugin = manifest.get("plugin") or {}
+    program = plugin.get("exec") or []
     built = os.path.isfile(os.path.join(folder, "build.sh"))
-    # A program that build.sh makes isn't in the repository; build.py checks it after building.
+    if plugin.get("facet"):
+        named.append(plugin["facet"])
+    # A program or library that build.sh makes isn't in the repository;
+    # build.py checks it after building.
     if program and not built:
         named.append(program[0])
+    if plugin.get("native") and not built:
+        problem(where, "a native plugin commits its source and a build.sh; CI builds the library")
     for relative in named:
         target = os.path.join(folder, relative)
         if not os.path.isfile(target):

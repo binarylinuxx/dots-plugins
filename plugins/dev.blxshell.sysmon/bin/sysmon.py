@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
-"""System monitor for the blxshell bar: CPU, memory or temperature.
+"""System monitor backend: measures CPU, memory and temperature for the
+plugin's Facet views (plugin.facet), which draw them.
 
-blxshell plugin protocol, api 1: JSON lines on stdin (from the shell) and
+blxshell plugin protocol, api 2: JSON lines on stdin (from the shell) and
 stdout (to the shell). Exits when stdin closes.
 """
 import glob
@@ -11,19 +12,9 @@ import sys
 import threading
 import time
 
-METRICS = ["cpu", "memory", "temperature"]
-ICONS = {"cpu": "developer_board", "memory": "memory_alt", "temperature": "device_thermostat"}
-
 lock = threading.Lock()
 wake = threading.Event()
-state = {
-    "metric": "cpu",
-    "detail": False,  # click: percent <-> detail (load average, GiB used, degrees)
-    "interval": 2.0,
-    "warn": 85.0,
-    "warn_temp": 85.0,
-    "ring": True,
-}
+store = {}
 
 
 def send(**message):
@@ -34,20 +25,15 @@ def send(**message):
 
 
 def log(text):
-    print(f"sysmon: {text}", file=sys.stderr, flush=True)
+    send(type="log", message=text)
 
-
-# --- readings -------------------------------------------------------------------
 
 _last_cpu = None
 _last_percent = 0.0
 
 
 def cpu_percent():
-    """Busy share of all CPU time since the last real sample, 0..100.
-
-    Calls closer together than a few clock ticks (a click right after a
-    reading) return the last value instead of a noisy one."""
+    """Busy share of all CPU time since the last real sample, 0..100."""
     global _last_cpu, _last_percent
     with open("/proc/stat") as f:
         fields = [int(x) for x in f.readline().split()[1:]]
@@ -56,9 +42,8 @@ def cpu_percent():
     if _last_cpu is not None and total - _last_cpu[1] < 5 * (os.cpu_count() or 1):
         return _last_percent
     previous, _last_cpu = _last_cpu, (idle, total)
-    if previous is None:
-        return _last_percent
-    _last_percent = 100.0 * (1 - (idle - previous[0]) / (total - previous[1]))
+    if previous is not None:
+        _last_percent = 100.0 * (1 - (idle - previous[0]) / (total - previous[1]))
     return _last_percent
 
 
@@ -82,9 +67,8 @@ def _read_milli(path):
         return None
 
 
-def _temperature_source():
-    """The CPU package sensor: a known hwmon driver, else the hottest thermal zone."""
-    preferred = ["coretemp", "k10temp", "zenpower", "cpu_thermal", "soc_thermal"]
+def _temperature_paths():
+    """The CPU package sensor: a known hwmon driver, else every thermal zone."""
     found = {}
     for hwmon in glob.glob("/sys/class/hwmon/hwmon*"):
         try:
@@ -92,12 +76,9 @@ def _temperature_source():
                 found[f.read().strip()] = hwmon
         except OSError:
             continue
-    for name in preferred:
-        if name in found:
-            # temp1 is the package / Tctl reading on these drivers.
-            path = os.path.join(found[name], "temp1_input")
-            if os.path.exists(path):
-                return [path]
+    for name in ("coretemp", "k10temp", "zenpower", "cpu_thermal", "soc_thermal"):
+        if name in found and os.path.exists(os.path.join(found[name], "temp1_input")):
+            return [os.path.join(found[name], "temp1_input")]
     return glob.glob("/sys/class/thermal/thermal_zone*/temp")
 
 
@@ -107,65 +88,45 @@ _temp_paths = None
 def temperature():
     global _temp_paths
     if _temp_paths is None:
-        _temp_paths = _temperature_source()
+        _temp_paths = _temperature_paths()
     readings = [t for t in (_read_milli(p) for p in _temp_paths) if t is not None]
     return max(readings) if readings else None
 
 
-def load_average():
-    with open("/proc/loadavg") as f:
-        return f.read().split()[0]
-
-
-# --- module ---------------------------------------------------------------------
-
 def report():
-    with lock:
-        metric, detail = state["metric"], state["detail"]
-        warn, warn_temp, ring = state["warn"], state["warn_temp"], state["ring"]
-    cpu = cpu_percent()  # sampled every tick so the next delta is fresh
-    progress = None
-    if metric == "cpu":
-        text = f"{load_average()}" if detail else f"{cpu:.0f}%"
-        progress, hot = cpu / 100, cpu >= warn
-    elif metric == "memory":
-        used, total, percent = memory()
-        text = f"{used:.1f}/{total:.0f}G" if detail else f"{percent:.0f}%"
-        progress, hot = percent / 100, percent >= warn
-    else:
-        degrees = temperature()
-        if degrees is None:
-            send(type="module", id="monitor", icon=ICONS[metric], text="n/a", tone="", progress=None)
-            return
-        text = f"{degrees * 9 / 5 + 32:.0f}°F" if detail else f"{degrees:.0f}°C"
-        progress, hot = min(degrees / 100, 1.0), degrees >= warn_temp
-    send(type="module", id="monitor", icon=ICONS[metric], text=text,
-         tone="error" if hot else "", progress=progress if ring else None, visible=True)
+    cpu = cpu_percent()
+    used, total, percent = memory()
+    degrees = temperature()
+    with open("/proc/loadavg") as f:
+        load = f.read().split()[0]
+    send(type="state", state={
+        "cpu": round(cpu, 1),
+        "cpu_text": f"{cpu:.0f}%",
+        "load": load,
+        "memory": round(percent, 1),
+        "memory_text": f"{percent:.0f}%",
+        "memory_detail": f"{used:.1f}/{total:.0f}G",
+        "temperature": round(degrees, 1) if degrees is not None else 0,
+        "temperature_text": f"{degrees:.0f}°C" if degrees is not None else "n/a",
+        "temperature_detail": f"{degrees * 9 / 5 + 32:.0f}°F" if degrees is not None else "n/a",
+    })
+
+
+def interval():
+    value = store.get("interval", 2)
+    return min(max(value, 0.5), 60) if isinstance(value, (int, float)) else 2
 
 
 def ticker():
-    # A first CPU sample, so the first reading isn't a meaningless 0 %.
     cpu_percent()
-    time.sleep(0.5)
+    time.sleep(0.5)  # a first sample, so the first reading means something
     while True:
         try:
             report()
-        except Exception as error:  # a sensor going away must not end the plugin
+        except Exception as error:  # a sensor going away must not end it
             log(f"reading failed: {error}")
-        wake.wait(state["interval"])
+        wake.wait(interval())
         wake.clear()
-
-
-def apply_settings(settings):
-    with lock:
-        if settings.get("metric") in METRICS:
-            state["metric"] = settings["metric"]
-        for key, low, high in (("interval", 0.5, 60), ("warn", 1, 100), ("warn_temp", 30, 120)):
-            value = settings.get(key)
-            if isinstance(value, (int, float)):
-                state[key] = float(min(max(value, low), high))
-        if isinstance(settings.get("ring"), bool):
-            state["ring"] = settings["ring"]
 
 
 def main():
@@ -176,32 +137,13 @@ def main():
         except ValueError:
             continue
         kind = message.get("type")
-        if kind in ("hello", "settings"):
-            apply_settings(message.get("settings") or {})
+        if kind in ("hello", "store"):
+            store.clear()
+            store.update(message.get("store") or {})
             if not started:
                 started = True
                 threading.Thread(target=ticker, daemon=True).start()
-        elif kind == "event" and message.get("module") == "monitor":
-            if message.get("event") == "scroll":
-                step = 1 if message.get("delta", 0) > 0 else -1
-                with lock:
-                    index = METRICS.index(state["metric"])
-                    state["metric"] = METRICS[(index + step) % len(METRICS)]
-                    state["detail"] = False
-            elif message.get("button") == "right":
-                send(type="shell", command=["dashboard", "toggle"])
-                continue
-            else:
-                with lock:
-                    state["detail"] = not state["detail"]
-        elif kind == "command":
-            name = message.get("name")
-            with lock:
-                if name in METRICS:
-                    state["metric"], state["detail"] = name, False
-                elif name == "next":
-                    state["metric"] = METRICS[(METRICS.index(state["metric"]) + 1) % len(METRICS)]
-        wake.set()  # show the change now, not at the next tick
+            wake.set()
 
 
 if __name__ == "__main__":

@@ -28,64 +28,14 @@
     "any"
   ],
   "plugin": {
-    "api": 1,
+    "api": 2,
+    "facet": "plugin.facet",
     "exec": [
       "bin/sysmon.py"
     ],
     "restart": "on-failure",
     "permissions": [
       "shell"
-    ],
-    "barModules": [
-      {
-        "id": "monitor",
-        "name": "System monitor",
-        "description": "Scroll: next metric. Click: percent or detail. Right click: dashboard."
-      }
-    ],
-    "commands": [
-      "cpu",
-      "memory",
-      "temperature",
-      "next"
-    ],
-    "settings": [
-      {
-        "key": "metric",
-        "type": "choice",
-        "label": "Show",
-        "choices": [
-          "cpu",
-          "memory",
-          "temperature"
-        ],
-        "default": "cpu"
-      },
-      {
-        "key": "interval",
-        "type": "number",
-        "label": "Update every (s)",
-        "default": 2
-      },
-      {
-        "key": "warn",
-        "type": "number",
-        "label": "CPU and memory turn red above (%)",
-        "default": 85
-      },
-      {
-        "key": "warn_temp",
-        "type": "number",
-        "label": "Temperature turns red above (°C)",
-        "default": 85
-      },
-      {
-        "key": "ring",
-        "type": "bool",
-        "label": "Usage ring",
-        "description": "Around the icon",
-        "default": true
-      }
     ]
   }
 }

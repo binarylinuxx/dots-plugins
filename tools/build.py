@@ -23,8 +23,8 @@ index.json is what `blxshell install <id>` and `blxshell search` read:
 
 Compiled plugins: a package folder with a build.sh is built here first, in a
 temporary copy (never the checkout). build.sh runs from the package folder
-and puts what it builds in bin/. The package then holds the committed files
-plus bin/; anything else the build leaves behind is dropped. Binaries are
+and puts what it builds in bin/ or lib/. The package then holds the committed
+files plus bin/ and lib/; anything else the build leaves behind is dropped. Binaries are
 never committed (tools/validate.py refuses them), so they only ever come
 from this step.
 
@@ -83,12 +83,15 @@ def build(folder: str, manifest: dict, workdir: str) -> str:
             relative = os.path.relpath(full, copy).replace(os.sep, "/")
             if os.path.islink(full):
                 sys.exit(f"{manifest['id']}: the build made a symlink, {relative}")
-            if relative not in keep and not relative.startswith("bin/"):
+            if relative not in keep and not relative.startswith(("bin/", "lib/")):
                 os.remove(full)
         for name in folders:
             full = os.path.join(directory, name)
             if os.path.isdir(full) and not os.listdir(full):
                 os.rmdir(full)
+    native = (manifest.get("plugin") or {}).get("native")
+    if native and not os.path.isfile(os.path.join(copy, native)):
+        sys.exit(f"{manifest['id']}: build.sh didn't make {native}")
     program = (manifest.get("plugin") or {}).get("exec") or []
     if program:
         target = os.path.join(copy, program[0])

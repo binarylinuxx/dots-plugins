@@ -1,0 +1,54 @@
+// Network speed: download and upload rates of the active connection.
+// bin/netspeed.py counts (state.backend); this file draws it and handles input.
+// The store keeps: mode (both, down, up), units (bytes, bits), hide_idle,
+// interface, interval.
+let [ vw.ui as ui, vw.layout as layout ] in
+
+view Bar(state, actions) {
+    let mode = actions.get("mode", "both")
+    let next = mode == "both" ? "down" : (mode == "down" ? "up" : "both")
+    let previous = mode == "both" ? "up" : (mode == "up" ? "down" : "both")
+    let units = actions.get("units", "bytes")
+    if state.ready {
+        let data = state.backend
+        if !(data.idle && actions.get("hide_idle", false)) {
+            let ink = data.idle || data.offline ? state.colours.textMuted : state.colours.text
+            let icon = data.offline ? "signal_disconnected" : (mode == "down" ? "download" : (mode == "up" ? "upload" : "swap_vert"))
+            let text = data.offline ? "offline" : (mode == "down" ? data.down : (mode == "up" ? data.up : data.down + " ↓ " + data.up + " ↑"))
+            Native(name: Pill, color: state.colours.surfaceContainer, padding: 8,
+                   on_click: () => actions.set("mode", next),
+                   on_right_click: () => actions.set("units", (units == "bytes" ? "bits" : "bytes")),
+                   on_scroll: (event) => actions.set("mode", (event.delta > 0 ? next : previous))) {
+                Native(name: Icon, glyph: icon, size: 18, color: data.offline ? ink : state.colours.primary)
+                ui.Text(text: text, font: state.fonts.text, size: 13, weight: medium, color: ink)
+            }
+        }
+    }
+}
+
+view Settings(state, actions) {
+    let interval = actions.get("interval", 1)
+    layout.Column(gap: 16, width: state.width, align: start) {
+        ui.Text(text: "Interface (empty follows the default route)", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.TextField(id: "netspeed-interface", value: actions.get("interface", ""), placeholder: "e.g. wlan0",
+                     width: state.width, height: 42, radius: 14,
+                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
+                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
+                     on_change: (text) => actions.set("interface", text))
+        ui.Text(text: "Update every " + interval + " s", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "netspeed-interval", value: interval, min: 0.5, max: 10, step: 0.5, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("interval", value))
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Units", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Dropdown(id: "netspeed-units", options: ["bytes", "bits"], value: actions.get("units", "bytes"), width: 160,
+                        color: state.colours.surfaceContainerHighest, text_color: state.colours.text,
+                        on_change: (picked) => actions.set("units", picked))
+        }
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Hide when idle (under 1 kB/s)", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Toggle(id: "netspeed-hide", value: actions.get("hide_idle", false), color: state.colours.primary,
+                      on_change: (on) => actions.set("hide_idle", on))
+        }
+    }
+}

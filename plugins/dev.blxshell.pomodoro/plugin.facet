@@ -1,0 +1,62 @@
+// Pomodoro: focus, short breaks, a long break every few rounds.
+// bin/pomodoro.py keeps the time (state.backend) and sends notifications;
+// this file draws it and sends what you did: toggle, skip, reset, longer,
+// shorter. The store keeps: focus, short_break, long_break, rounds,
+// auto_start, notify.
+let [ vw.ui as ui, vw.layout as layout ] in
+
+view Bar(state, actions) {
+    if state.ready {
+        let t = state.backend
+        let idle = !t.running
+        let tone = idle ? state.colours.textMuted : (t.phase == "focus" ? state.colours.primary : state.colours.tertiary)
+        let icon = idle && t.started ? "pause_circle" : (t.phase == "focus" ? "timer" : (t.phase == "long_break" ? "self_improvement" : "coffee"))
+        Native(name: Pill, color: state.colours.surfaceContainer, padding: 6,
+               on_click: () => actions.send("toggle"),
+               on_right_click: () => actions.send("skip"),
+               on_middle_click: () => actions.send("reset"),
+               on_scroll: (event) => actions.send((event.delta > 0 ? "shorter" : "longer"))) {
+            if t.started {
+                Native(name: Ring, progress: t.progress, size: 22, stroke: 2, color: tone)
+            } else {
+                Native(name: Icon, glyph: icon, size: 20, color: tone)
+            }
+            ui.Text(text: t.text, font: state.fonts.display, size: 14, weight: bold, color: tone)
+        }
+    }
+}
+
+view Settings(state, actions) {
+    let focus = actions.get("focus", 25)
+    let short_break = actions.get("short_break", 5)
+    let long_break = actions.get("long_break", 15)
+    let rounds = actions.get("rounds", 4)
+    layout.Column(gap: 16, width: state.width, align: start) {
+        ui.Text(text: "Focus: " + focus + " minutes", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "pomodoro-focus", value: focus, min: 5, max: 90, step: 5, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("focus", value))
+        ui.Text(text: "Short break: " + short_break + " minutes", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "pomodoro-short", value: short_break, min: 1, max: 30, step: 1, width: state.width,
+                  color: state.colours.tertiary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("short_break", value))
+        ui.Text(text: "Long break: " + long_break + " minutes", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "pomodoro-long", value: long_break, min: 5, max: 60, step: 5, width: state.width,
+                  color: state.colours.tertiary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("long_break", value))
+        ui.Text(text: "A long break every " + rounds + " rounds", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "pomodoro-rounds", value: rounds, min: 2, max: 8, step: 1, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("rounds", value))
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Start the next phase on its own", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Toggle(id: "pomodoro-auto", value: actions.get("auto_start", false), color: state.colours.primary,
+                      on_change: (on) => actions.set("auto_start", on))
+        }
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Notify when a phase ends", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Toggle(id: "pomodoro-notify", value: actions.get("notify", true), color: state.colours.primary,
+                      on_change: (on) => actions.set("notify", on))
+        }
+    }
+}
