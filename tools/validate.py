@@ -145,8 +145,7 @@ def check_package(entry, validator):
         if not os.access(os.path.join(folder, program[0]), os.X_OK):
             problem(where, f"{program[0]} is not executable (git update-index --chmod=+x {path}/{program[0]})")
     if manifest.get("type") == "plugin" and not manifest.get("previews"):
-        # Wanted before review; not a reason to hold back the release.
-        print(f"warning: {where}: no screenshot in previews yet")
+        problem(where, f"plugins need a preview: a screenshot, or a drawn one (python3 tools/thumbnail.py {path})")
 
 
 def main():

@@ -19,6 +19,9 @@
     "parallax",
     "desktop"
   ],
+  "previews": [
+    "thumbnail.svg"
+  ],
   "blxshell": ">=0.1.0",
   "compositors": [
     "any"

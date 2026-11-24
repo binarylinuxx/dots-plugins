@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#11140f"/>
+      <stop offset="1" stop-color="#253b18"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="450" fill="url(#sky)"/>
+  <circle cx="610" cy="120" r="46" fill="#a8d08d" fill-opacity="0.85"/>
+  <path d="M0 260 C 140 200, 260 230, 380 210 S 640 190, 800 240 L 800 450 L 0 450 Z" fill="#2d4f1d" fill-opacity="0.55"/>
+  <path d="M0 310 C 120 270, 250 300, 400 280 S 650 260, 800 300 L 800 450 L 0 450 Z" fill="#3d6b28" fill-opacity="0.75"/>
+  <path d="M0 360 C 150 330, 300 370, 450 345 S 680 330, 800 360 L 800 450 L 0 450 Z" fill="#5a8a3a" fill-opacity="0.9"/>
+  <path d="M0 410 C 160 395, 320 425, 480 405 S 700 395, 800 412 L 800 450 L 0 450 Z" fill="#a8d08d" fill-opacity="1.0"/>
+  <text x="40" y="70" font-family="Rubik, sans-serif" font-size="30" font-weight="700" fill="#e2e3da">Dynamic wallpaper</text>
+</svg>

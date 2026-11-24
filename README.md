@@ -85,7 +85,8 @@ the four plugins here are working examples.
    (reverse-DNS, e.g. `io.github.you.weather`).
 2. Add it to `list.json`.
 3. For a plugin, include a `screenshot.png` of it in the bar and list it in
-   `previews`.
+   `previews`, or draw a simple one: `python3 tools/thumbnail.py plugins/<id>`
+   (`--style layers` for wallpapers).
 4. Run the checks, and pack it once to be sure blxshell reads it:
 
    ```sh
