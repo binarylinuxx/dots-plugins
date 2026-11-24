@@ -85,11 +85,37 @@ the package's own `manifest.json`. The format is described on the
 5. Open a pull request. Once it's merged, CI builds it and `blxshell install <id>`
    gets it.
 
+### Compiled plugins
+
+No compiled binaries are accepted: not executables, libraries, object files,
+WebAssembly, or archives that could hold them. CI refuses them. A plugin
+written in a compiled language commits its **source** and a **`build.sh`**,
+and only CI builds it:
+
+```text
+plugins/io.github.you.weather/
+├── manifest.json        "exec": ["bin/weather"]
+├── screenshot.png
+├── build.sh             builds into bin/ (must be executable)
+└── src/…
+```
+
+- `build.sh` runs from the package folder on GitHub's `ubuntu-latest`
+  runner, in a throwaway copy, with `bash -euo pipefail`.
+- What it puts in `bin/` goes into the package, next to the committed files.
+  Anything else it leaves behind is dropped.
+- The program named in `exec` must exist and be executable afterwards.
+
+Try it locally with `python3 tools/build.py`. This way the code reviewers read
+is the code users run, and no one can slip a binary past review.
+
 Reviewers look at:
 
 - **Permissions**: does it ask only for what it uses? `shell` and
   `notifications` are enforced by blxshell; the rest are declarations users rely
   on, so they must be truthful.
+- **Compiled plugins**: the source and `build.sh` get the same reading as any
+  plugin code; the build must not download and run anything unpinned.
 - **The code**: a plugin runs as the user. No obfuscated or minified code, no
   downloading and running code at runtime, and no network access unless
   declared and needed.

@@ -9,6 +9,9 @@
   module is installed; CI installs it);
 - every file a manifest names exists, and a plugin's program is executable;
 - packages hold only regular files and folders (no links), under 64 MiB;
+- no compiled binaries or archives: a compiled plugin commits its source and
+  a build.sh, and only CI builds it (tools/build.py), so what reviewers read
+  is what users run;
 - no folder in plugins/ or themes/ is missing from list.json.
 
 Exits 1 with a list of problems, 0 when everything passes.
@@ -45,6 +48,43 @@ def schema_validator():
     return jsonschema.Draft202012Validator(schema) if schema else None
 
 
+# Magic numbers of compiled code and archives. Anything starting with one of
+# these is refused: a compiled plugin commits source and a build.sh instead.
+BINARY_MAGIC = [
+    (b"\x7fELF", "an ELF binary"),
+    (b"\xfe\xed\xfa\xce", "a Mach-O binary"), (b"\xfe\xed\xfa\xcf", "a Mach-O binary"),
+    (b"\xce\xfa\xed\xfe", "a Mach-O binary"), (b"\xcf\xfa\xed\xfe", "a Mach-O binary"),
+    (b"\xca\xfe\xba\xbe", "a Mach-O or Java class file"),
+    (b"MZ", "a Windows executable"),
+    (b"\x00asm", "a WebAssembly module"),
+    (b"!<arch>", "a static library"),
+    (b"PK\x03\x04", "a zip archive"),
+    (b"\x1f\x8b", "a gzip archive"),
+    (b"\x28\xb5\x2f\xfd", "a zstd archive"),
+    (b"BZh", "a bzip2 archive"),
+    (b"\xfd7zXZ\x00", "an xz archive"),
+    (b"7z\xbc\xaf\x27\x1c", "a 7z archive"),
+    (b"Rar!", "a rar archive"),
+]
+
+
+def binary_kind(path):
+    try:
+        with open(path, "rb") as f:
+            head = f.read(512)
+    except OSError:
+        return None
+    for magic, kind in BINARY_MAGIC:
+        if head.startswith(magic):
+            # "MZ" and "BZh" are short; only count them with what follows.
+            if magic == b"MZ" and b"PE\x00\x00" not in head and b"This program" not in head:
+                continue
+            return kind
+    if len(head) >= 262 and head[257:262] == b"ustar":
+        return "a tar archive"
+    return None
+
+
 def check_package(entry, validator):
     path = entry.get("path", "")
     where = path or "?"
@@ -64,6 +104,10 @@ def check_package(entry, validator):
                 problem(where, f"{os.path.relpath(full, folder)} is a symlink; packages hold only files and folders")
             elif stat.S_ISREG(mode):
                 total += os.path.getsize(full)
+                kind = binary_kind(full)
+                if kind:
+                    problem(where, f"{os.path.relpath(full, folder)} is {kind}. Compiled code isn't accepted: commit its "
+                                   "source and a build.sh that builds it, and CI compiles it (see README)")
     if total > 64 << 20:
         problem(where, "larger than 64 MiB")
     manifest = load(os.path.join(folder, "manifest.json"))
@@ -81,12 +125,16 @@ def check_package(entry, validator):
     if manifest.get("icon"):
         named.append(manifest["icon"])
     program = (manifest.get("plugin") or {}).get("exec") or []
-    if program:
+    built = os.path.isfile(os.path.join(folder, "build.sh"))
+    # A program that build.sh makes isn't in the repository; build.py checks it after building.
+    if program and not built:
         named.append(program[0])
     for relative in named:
         target = os.path.join(folder, relative)
         if not os.path.isfile(target):
             problem(where, f"{relative} is named in the manifest but missing")
+    if built and not os.access(os.path.join(folder, "build.sh"), os.X_OK):
+        problem(where, f"build.sh is not executable (git update-index --chmod=+x {path}/build.sh)")
     if program and os.path.isfile(os.path.join(folder, program[0])):
         if not os.access(os.path.join(folder, program[0]), os.X_OK):
             problem(where, f"{program[0]} is not executable (git update-index --chmod=+x {path}/{program[0]})")

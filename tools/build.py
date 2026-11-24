@@ -21,6 +21,13 @@ index.json is what `blxshell install <id>` and `blxshell search` read:
       ]
     }
 
+Compiled plugins: a package folder with a build.sh is built here first, in a
+temporary copy (never the checkout). build.sh runs from the package folder
+and puts what it builds in bin/. The package then holds the committed files
+plus bin/; anything else the build leaves behind is dropped. Binaries are
+never committed (tools/validate.py refuses them), so they only ever come
+from this step.
+
 `url` is where the file is published: base-url + file. The release workflow
 uploads everything in the output folder to the "packages" release, so the
 default base is that release's download address.
@@ -34,6 +41,7 @@ import shutil
 import subprocess
 import sys
 import tarfile
+import tempfile
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -46,6 +54,49 @@ def compress(data: bytes) -> bytes:
         if not shutil.which("zstd"):
             sys.exit("need the zstd command (or Python 3.14+)")
         return subprocess.run(["zstd", "-19", "-q", "-c"], input=data, capture_output=True, check=True).stdout
+
+
+def committed_files(folder: str) -> set:
+    """The package's files as they are in the repository (relative paths)."""
+    result = set()
+    for directory, folders, files in os.walk(folder):
+        folders[:] = [f for f in folders if f != "__pycache__"]
+        for name in files:
+            if not name.endswith(".pyc"):
+                result.add(os.path.relpath(os.path.join(directory, name), folder).replace(os.sep, "/"))
+    return result
+
+
+def build(folder: str, manifest: dict, workdir: str) -> str:
+    """Runs the package's build.sh in a copy of it; the folder to pack."""
+    copy = os.path.join(workdir, manifest["id"])
+    shutil.copytree(folder, copy, symlinks=True)
+    print(f"building {manifest['id']} with build.sh", flush=True)
+    result = subprocess.run(["bash", "-euo", "pipefail", "./build.sh"], cwd=copy, timeout=20 * 60)
+    if result.returncode != 0:
+        sys.exit(f"{manifest['id']}: build.sh failed ({result.returncode})")
+    # Keep what was committed, plus bin/; drop the build's leftovers.
+    keep = committed_files(folder)
+    for directory, folders, files in os.walk(copy, topdown=False):
+        for name in files:
+            full = os.path.join(directory, name)
+            relative = os.path.relpath(full, copy).replace(os.sep, "/")
+            if os.path.islink(full):
+                sys.exit(f"{manifest['id']}: the build made a symlink, {relative}")
+            if relative not in keep and not relative.startswith("bin/"):
+                os.remove(full)
+        for name in folders:
+            full = os.path.join(directory, name)
+            if os.path.isdir(full) and not os.listdir(full):
+                os.rmdir(full)
+    program = (manifest.get("plugin") or {}).get("exec") or []
+    if program:
+        target = os.path.join(copy, program[0])
+        if not os.path.isfile(target):
+            sys.exit(f"{manifest['id']}: build.sh didn't make {program[0]}")
+        if not os.access(target, os.X_OK):
+            sys.exit(f"{manifest['id']}: {program[0]} isn't executable after the build")
+    return copy
 
 
 def pack(folder: str) -> bytes:
@@ -98,7 +149,11 @@ def main():
         with open(os.path.join(folder, "manifest.json"), encoding="utf-8") as f:
             manifest = json.load(f)
         file = f"{manifest['id']}-{manifest['version']}.blx"
-        data = pack(folder)
+        if os.path.isfile(os.path.join(folder, "build.sh")):
+            with tempfile.TemporaryDirectory() as workdir:
+                data = pack(build(folder, manifest, workdir))
+        else:
+            data = pack(folder)
         with open(os.path.join(args.out, file), "wb") as f:
             f.write(data)
         plugin = manifest.get("plugin") or {}
