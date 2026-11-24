@@ -1,0 +1,37 @@
+{
+  "$schema": "https://raw.githubusercontent.com/binarylinuxx/dots/main/schemas/manifest.schema.json",
+  "schema": 1,
+  "type": "plugin",
+  "id": "dev.blxshell.wallpaper",
+  "name": "Dynamic wallpaper",
+  "version": "1.0.0",
+  "description": "A layered wallpaper whose layers slide at their own depths as you change workspace, or images that crossfade from morning to night.",
+  "authors": [
+    {
+      "name": "binarylinuxx",
+      "url": "https://github.com/binarylinuxx"
+    }
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/binarylinuxx/dots-plugins",
+  "tags": [
+    "wallpaper",
+    "parallax",
+    "desktop"
+  ],
+  "blxshell": ">=0.1.0",
+  "compositors": [
+    "any"
+  ],
+  "plugin": {
+    "api": 2,
+    "facet": "plugin.facet",
+    "exec": [
+      "bin/wallpaper.py"
+    ],
+    "restart": "on-failure",
+    "permissions": [
+      "filesystem"
+    ]
+  }
+}

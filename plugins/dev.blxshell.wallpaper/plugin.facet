@@ -1,0 +1,53 @@
+// Dynamic wallpaper: parallax layers that slide as you change workspace, or
+// images that crossfade through the day.
+//
+// bin/wallpaper.py reads the folder and sends the layers to draw
+// (state.backend.layers: path, depth, opacity); this file places them. The
+// store keeps: folder, mode (parallax, time), strength, glide.
+let [ vw.ui as ui, vw.layout as layout ] in
+
+view Wallpaper(state, actions) {
+    if state.ready {
+        let count = state.workspace.count
+        // 0 at the first workspace, 1 at the last: the layers slide across.
+        let shift = count > 1 ? (state.workspace.index / (count - 1)) : 0.5
+        Native(name: Parallax, id: "wallpaper", layers: state.backend.layers,
+               shift: (state.backend.mode == "time" ? 0.5 : shift),
+               strength: actions.get("strength", 0.04),
+               glide: actions.get("glide", 900),
+               width: state.screen.width, height: state.screen.height)
+    }
+}
+
+view Settings(state, actions) {
+    let mode = actions.get("mode", "parallax")
+    let strength = actions.get("strength", 0.04)
+    let glide = actions.get("glide", 900)
+    layout.Column(gap: 16, width: state.width, align: start) {
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Mode", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Dropdown(id: "wallpaper-mode", options: ["parallax", "time"], value: mode, width: 180,
+                        color: state.colours.surfaceContainerHighest, text_color: state.colours.text,
+                        on_change: (picked) => actions.set("mode", picked))
+        }
+        ui.Text(text: mode == "time"
+                    ? "Folder with morning, day, evening and night images"
+                    : "Folder with layers: 0.png at the back, then 1.png, 2.png… to the front",
+                font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.TextField(id: "wallpaper-folder", value: actions.get("folder", ""), placeholder: "~/.local/wallpapers/layers",
+                     width: state.width, height: 42, radius: 14,
+                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
+                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
+                     on_change: (text) => actions.set("folder", text))
+        if mode == "parallax" {
+            ui.Text(text: "Depth: " + (strength * 100) + "% of the screen per layer", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Slider(id: "wallpaper-strength", value: strength, min: 0, max: 0.15, step: 0.01, width: state.width,
+                      color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                      on_change: (value) => actions.set("strength", value))
+            ui.Text(text: "Glide: " + glide + " ms", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Slider(id: "wallpaper-glide", value: glide, min: 0, max: 3000, step: 100, width: state.width,
+                      color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                      on_change: (value) => actions.set("glide", value))
+        }
+    }
+}
