@@ -1,5 +1,6 @@
 {
   "schema": 1,
+  "project": "blxshell",
   "name": "blxshell official",
   "packages": [
     { "id": "dev.blxshell.sysmon", "path": "plugins/dev.blxshell.sysmon" },

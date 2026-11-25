@@ -12,6 +12,7 @@ index.json is what `blxshell install <id>` and `blxshell search` read:
 
     {
       "schema": 1,
+      "project": "blxshell",
       "name": "...",
       "repository": "owner/name",
       "packages": [
@@ -146,7 +147,9 @@ def main():
         shutil.rmtree(args.out)
     os.makedirs(args.out)
 
-    index = {"schema": 1, "name": listing.get("name", repository), "repository": repository, "packages": []}
+    project = listing.get("project", "blxshell")
+    index = {"schema": 1, "project": project, "name": listing.get("name", repository), "repository": repository,
+             "packages": []}
     for entry in listing["packages"]:
         folder = os.path.join(ROOT, entry["path"])
         with open(os.path.join(folder, "manifest.json"), encoding="utf-8") as f:
@@ -162,6 +165,7 @@ def main():
         plugin = manifest.get("plugin") or {}
         index["packages"].append({
             "id": manifest["id"],
+            "project": manifest.get("project", "blxshell"),
             "type": manifest["type"],
             "name": manifest["name"],
             "version": manifest["version"],

@@ -85,7 +85,7 @@ def binary_kind(path):
     return None
 
 
-def check_package(entry, validator):
+def check_package(entry, validator, project="blxshell"):
     path = entry.get("path", "")
     where = path or "?"
     folder = os.path.normpath(os.path.join(ROOT, path))
@@ -117,6 +117,8 @@ def check_package(entry, validator):
         for error in validator.iter_errors(manifest):
             location = "/".join(str(part) for part in error.absolute_path) or "manifest"
             problem(where, f"{location}: {error.message}")
+    if manifest.get("project", "blxshell") != project:
+        problem(where, f"it's a package for {manifest.get('project')!r}, and this repository is for {project!r}")
     if manifest.get("id") != entry.get("id"):
         problem(where, f"manifest id {manifest.get('id')!r} doesn't match list.json's {entry.get('id')!r}")
     if os.path.basename(folder) != manifest.get("id"):
@@ -170,7 +172,7 @@ def main():
             problem("list.json", f"{entry['id']} is listed twice")
         seen_ids.add(entry["id"])
         seen_paths.add(os.path.normpath(entry["path"]))
-        check_package(entry, validator)
+        check_package(entry, validator, listing.get("project", "blxshell"))
     for kind in ("plugins", "themes"):
         base = os.path.join(ROOT, kind)
         if os.path.isdir(base):
