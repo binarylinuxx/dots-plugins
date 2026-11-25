@@ -4,8 +4,8 @@
   "type": "plugin",
   "id": "dev.blxshell.desktop",
   "name": "Desktop icons",
-  "version": "1.0.0",
-  "description": "The files in your desktop folder as icons on the wallpaper. Click one for its actions: open, open with another app, show in folder, copy path, move to trash.",
+  "version": "2.0.0",
+  "description": "The files in your desktop folder as icons on the wallpaper, shaped and tinted like Android's adaptive icons if you like. Click one for its actions: open, open with another app, show in folder, copy path, move to trash.",
   "authors": [
     {
       "name": "binarylinuxx",
@@ -30,11 +30,9 @@
   "plugin": {
     "api": 2,
     "facet": "plugin.facet",
-    "exec": [
-      "bin/desktop.py"
-    ],
-    "restart": "on-failure",
+    "native": "lib/plugin.so",
     "permissions": [
+      "native",
       "filesystem",
       "spawn"
     ]

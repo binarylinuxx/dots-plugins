@@ -1,12 +1,49 @@
-// Desktop icons: bin/desktop.py puts your desktop folder's files on the
+// Desktop icons: lib/plugin.so (src/plugin.cpp) puts your desktop folder's files on the
 // wallpaper (as desktop items) and runs their actions. This file is its page
 // in Settings. The store keeps: folder, sort, folders_first, show_hidden,
-// other_apps.
+// other_apps, shape, tint.
 let [ vw.ui as ui, vw.layout as layout ] in
 
 view Settings(state, actions) {
     let other_apps = actions.get("other_apps", 4)
+    let shape = actions.get("shape", "none")
+    let tint = actions.get("tint", "none")
+    let shapes = ["none", "circle", "square", "cookie4sided", "cookie6sided", "cookie7sided", "cookie9sided",
+                  "cookie12sided", "clover4leaf", "clover8leaf", "sunny", "verysunny", "softburst", "flower", "puffy",
+                  "pentagon", "gem", "diamond", "arch", "slanted", "pill", "ghostish", "bun", "heart"]
+    let tints = ["none", "colour", "themed"]
     layout.Column(gap: 16, width: state.width, align: start) {
+        ui.Text(text: "Icon shape", font: state.fonts.text, size: 15, color: state.colours.text)
+        layout.Grid(columns: 8, gap: 8, width: state.width) {
+            for name in shapes key name {
+                ui.Rectangle(width: "100%", height: 56, radius: 18,
+                             color: name == shape ? state.colours.primaryContainer : state.colours.surfaceContainerHigh,
+                             input: { on_click: () => actions.set("shape", name) }) {
+                    layout.Column(width: "100%", height: 56, align: center, justify: center) {
+                        if name == "none" {
+                            Native(name: Icon, glyph: "block", size: 24,
+                                   color: name == shape ? state.colours.primary : state.colours.textMuted)
+                        } else {
+                            Native(name: Shape, id: "desktop-picker." + name, shape: name, size: 32,
+                                   color: name == shape ? state.colours.primary : state.colours.textMuted)
+                        }
+                    }
+                }
+            }
+        }
+        ui.Text(text: "Icon colours", font: state.fonts.text, size: 15, color: state.colours.text)
+        layout.Row(gap: 8, width: state.width) {
+            for option in tints key option {
+                ui.Rectangle(width: 128, height: 40, radius: 20,
+                             color: option == tint ? state.colours.primary : state.colours.surfaceContainerHigh,
+                             input: { on_click: () => actions.set("tint", option) }) {
+                    layout.Row(width: 128, height: 40, justify: center, align: center) {
+                        ui.Text(text: option == "none" ? "Own colours" : option == "colour" ? "Tinted" : "Themed", font: state.fonts.text, size: 14,
+                                color: option == tint ? state.colours.primaryText : state.colours.text)
+                    }
+                }
+            }
+        }
         ui.Text(text: "Folder (empty uses your desktop folder, ~/Desktop)", font: state.fonts.text, size: 15, color: state.colours.text)
         ui.TextField(id: "desktop-folder", value: actions.get("folder", ""), placeholder: "~/Desktop",
                      width: state.width, height: 42, radius: 14,
