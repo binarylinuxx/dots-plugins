@@ -175,6 +175,10 @@ def main():
             "blxshell": manifest.get("blxshell", ""),
             "tags": manifest.get("tags", []),
             "previews": [args.raw_url + entry["path"] + "/" + p for p in manifest.get("previews", [])],
+            "readme": (args.raw_url + entry["path"] + "/README.md"
+                       if os.path.isfile(os.path.join(folder, "README.md")) else ""),
+            "license": manifest.get("license", ""),
+            "authors": [a if isinstance(a, str) else a.get("name", "") for a in manifest.get("authors", [])],
             "file": file,
             "url": args.base_url + file,
             "sha256": hashlib.sha256(data).hexdigest(),
