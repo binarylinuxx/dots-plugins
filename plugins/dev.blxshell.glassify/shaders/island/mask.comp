@@ -1,0 +1,20 @@
+#version 450
+// Port of zwwm's island-mask.comp (from ShojiWM's island-mask, MIT, bea4dev).
+// R is coverage, G the alpha itself. zwwm takes the window's alpha; here the
+// shape is the rectangle's own rounded outline.
+//
+// @vw name: Island mask
+// @vw params: surface_opacity
+#define VW_USE_TARGETS
+#include <vw/shader.glsl>
+
+void main() {
+  ivec2 pixel;
+  if (!vw_pass_begin(pixel)) return;
+  vec2 local = vw_pass_local(pixel);
+  float clip = clamp(0.5 - vw_rounded_box(local - vw_size() * 0.5, vw_size() * 0.5, vw_radius()), 0.0, 1.0);
+  float alpha = clip;
+  // Coverage is alpha over the surface's own opacity, so a translucent surface still counts as solid glass.
+  float coverage = clamp(alpha / max(vw_param(0), 0.0001), 0.0, 1.0);
+  vw_store(pixel, vec4(coverage, alpha, 0.0, 1.0));
+}

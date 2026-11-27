@@ -1,63 +1,295 @@
 #version 450
-// Liquid glass for blxshell's lock screen: each backdrop becomes a slab of
-// glass with rounded edges. Light through the rim bends in from beyond the
-// edge, the body magnifies a little, and the theme tints it faintly. No
-// highlights, rims or glare: only refraction.
+// Glassify: blxshell's lock screen backdrops as glass. Three styles, all
+// refraction of the wallpaper behind each pill, card and sheet:
 //
-//   shader_params  0 refraction  how far the rim bends light, in pixels
-//                  1 bezel       how wide the rounded rim is, in pixels
-//                  2 magnify     how much the body enlarges what is behind
+//   0 Liquid   zwwm's glass.frag: a single-pass port of ShojiWM's
+//              island-refract (MIT, bea4dev) with an exact distance field.
+//              A circular lens profile (Aghajari's Liquid Glass article)
+//              over a smoothed distance, colour fringe, optional highlight
+//              and inner bevel shadow.
+//   1 Frosted  zwwm's kawase-glass.frag: a quarter-circle lens over the
+//              blurred wallpaper, with colour fringe.
+//   2 Simple   Glassify 1.0: a round rim that bends light in from beyond the
+//              edge, nothing else.
+//   3 Island   zwwm's island-refract.frag (ShojiWM's island-refract, MIT,
+//              bea4dev), in full: run as the last of the island passes
+//              (shaders/island/, in zwwm's order), it reads their silhouette
+//              (input 0) and distance field (input 1). The backdrop colour
+//              comes in color2 then, as the rectangle itself is transparent.
+//
+// vw gives a shader what was drawn before it, not a blurred copy as zwwm
+// does, so "blur" here is the shader's own (a 9-tap ring). With the lock
+// screen's own wallpaper blur on, the backdrop is blurred already.
+//
+//   shader_params  0 refraction  how far the lens bends, px
+//                  1 rim         how wide the lens is, px
+//                  2 magnify     how much the flat middle enlarges, 0..0.5
 //                  3 opacity     the item's opacity (blxshell sets it)
-//   colour         the tint; its alpha is the user's Background setting
+//   shader_data    see the Settings struct
+//   colour         the backdrop colour; its alpha tints the glass
 //
-// @vw name: Liquid glass
-// @vw params: refraction, bezel, magnify, opacity
+// @vw name: Glass
+// @vw params: refraction, rim, magnify, opacity
 #define VW_USE_BACKDROP
+#define VW_USE_DATA
+#define VW_USE_TARGETS
 #include <vw/shader.glsl>
 
-float shape(vec2 p) { return vw_rounded_box(p, vw_size() * 0.5, vw_radius()); }
+float data_or(uint index, float fallback) { return index < vw_data_length() ? vw_data(index) : fallback; }
 
-// The backdrop between pixels: refraction moves by fractions of one.
-vec4 behind(vec2 at) {
+struct Settings {
+  int style;
+  float power;            // corner shape: 2 round, higher squarer (zwwm's rounding_power)
+  float chromatic;        // colour fringe, px
+  float softness;         // lens edge softness, px
+  float smoothing;        // how far the bend direction is smoothed, px (0: a fifth of the rim)
+  float blur_mix;         // 0 the wallpaper as it is, 1 blurred
+  float blur_radius;      // px
+  float highlight;        // 0..1; 0 is none
+  float highlight_width;  // px
+  float bevel;            // inner bevel width, px
+  float bevel_shadow;     // 0..0.6
+  float brightness;       // multiplies the glass (zwwm's glass_tint_per_mille / 1000)
+};
+
+Settings settings() {
+  Settings s;
+  s.style = int(data_or(0u, 0.0) + 0.5);
+  s.power = clamp(data_or(1u, 2.0), 1.0, 16.0);
+  s.chromatic = data_or(2u, 1.2);
+  s.softness = max(data_or(3u, 1.0), 0.0);
+  s.smoothing = max(data_or(4u, 0.0), 0.0);
+  s.blur_mix = clamp(data_or(5u, 0.0), 0.0, 1.0);
+  s.blur_radius = max(data_or(6u, 6.0), 0.0);
+  s.highlight = clamp(data_or(7u, 0.0), 0.0, 1.0);
+  s.highlight_width = max(data_or(8u, 1.0), 0.5);
+  s.bevel = max(data_or(9u, 6.0), 1.0);
+  s.bevel_shadow = clamp(data_or(10u, 0.0), 0.0, 0.6);
+  s.brightness = max(data_or(11u, 1.0), 0.0);
+  return s;
+}
+
+// --- The wallpaper behind -------------------------------------------------------
+
+// Between pixels: refraction moves by fractions of one.
+vec3 sharp(vec2 at) {
   vec2 p = at - 0.5;
   ivec2 i = ivec2(floor(p));
   vec2 f = fract(p);
   vec4 top = mix(vw_backdrop(i), vw_backdrop(i + ivec2(1, 0)), f.x);
   vec4 bottom = mix(vw_backdrop(i + ivec2(0, 1)), vw_backdrop(i + ivec2(1, 1)), f.x);
-  return mix(top, bottom, f.y);
+  return mix(top, bottom, f.y).rgb;
+}
+
+// A cheap blur: the centre and a ring of eight, like one Kawase step.
+vec3 soft(vec2 at, float radius) {
+  if (radius < 0.5) return sharp(at);
+  vec3 sum = sharp(at) * 0.2;
+  const vec2 ring[8] = vec2[8](vec2(1.0, 0.0), vec2(0.7071, 0.7071), vec2(0.0, 1.0), vec2(-0.7071, 0.7071),
+                               vec2(-1.0, 0.0), vec2(-0.7071, -0.7071), vec2(0.0, -1.0), vec2(0.7071, -0.7071));
+  for (int i = 0; i < 8; ++i) sum += sharp(at + ring[i] * radius) * 0.1;
+  return sum;
+}
+
+vec3 background(vec2 at, Settings s) {
+  if (s.blur_mix <= 0.0) return sharp(at);
+  if (s.blur_mix >= 1.0) return soft(at, s.blur_radius);
+  return mix(sharp(at), soft(at, s.blur_radius), s.blur_mix);
+}
+
+// --- The shape ------------------------------------------------------------------
+
+float power_length(vec2 value, float power) {
+  return pow(pow(value.x, power) + pow(value.y, power), 1.0 / power);
+}
+
+// Negative inside the rounded rectangle (a superellipse corner past power 2).
+float sdf(vec2 point, vec2 half_size, float radius, float power) {
+  float r = clamp(radius, 0.0, min(half_size.x, half_size.y));
+  vec2 distance = abs(point) - half_size + vec2(r);
+  return power_length(max(distance, vec2(0.0)), power) + min(max(distance.x, distance.y), 0.0) - r;
+}
+
+const float WEIGHTS[5] = float[5](0.0625, 0.25, 0.375, 0.25, 0.0625);
+
+// The inward depth blurred over a wide kernel: its slope turns smoothly
+// around corners without creasing.
+float smoothed_depth(vec2 point, vec2 half_size, float radius, float power, float limit, float spacing) {
+  float sum = 0.0;
+  for (int y = 0; y < 5; ++y)
+    for (int x = 0; x < 5; ++x)
+      sum += WEIGHTS[x] * WEIGHTS[y] *
+             clamp(-sdf(point + vec2(float(x - 2), float(y - 2)) * spacing, half_size, radius, power), -limit, limit);
+  return sum;
+}
+
+vec2 inward_of(vec2 point, vec2 half_size, float radius, float power, float limit, float spacing, float step,
+               out float coherence) {
+  vec2 dx = vec2(step, 0.0);
+  vec2 dy = vec2(0.0, step);
+  vec2 gradient = vec2(smoothed_depth(point + dx, half_size, radius, power, limit, spacing) -
+                           smoothed_depth(point - dx, half_size, radius, power, limit, spacing),
+                       smoothed_depth(point + dy, half_size, radius, power, limit, spacing) -
+                           smoothed_depth(point - dy, half_size, radius, power, limit, spacing)) / (2.0 * step);
+  float magnitude = length(gradient);
+  coherence = smoothstep(0.15, 0.85, magnitude);
+  return gradient / max(magnitude, 0.0001);
+}
+
+// Circular lens profile, softened at the very edge.
+float circular_lens(float distance, float width, float softness) {
+  float x = 1.0 - clamp(distance / width, 0.0, 1.0);
+  float epsilon = clamp(softness / width, 0.0001, 0.5);
+  float top = sqrt(1.0 + epsilon);
+  return (top - sqrt(max(1.0 - x * x, 0.0) + epsilon)) / (top - sqrt(epsilon));
+}
+
+float filtered_circular_lens(float distance, float width, float softness) {
+  return 0.25 * (circular_lens(distance - 0.375, width, softness) + circular_lens(distance - 0.125, width, softness) +
+                 circular_lens(distance + 0.125, width, softness) + circular_lens(distance + 0.375, width, softness));
+}
+
+// --- The styles -----------------------------------------------------------------
+
+// 0: zwwm's glass.frag.
+vec3 liquid(vec2 base, vec2 point, vec2 half_size, float corner, float edge, Settings s) {
+  float distance = max(-edge, 0.0);
+  float rim_width = max(vw_param(1), 1.0);
+  // A pill's ridge is its half-height: thinner shapes get a narrower lens of the same form.
+  float lens_width = clamp(min(half_size.x, half_size.y), 1.0, rim_width);
+  float lens_scale = lens_width / rim_width;
+  if (distance >= lens_width + 0.5) return background(base, s);
+
+  float spacing = max(s.smoothing, rim_width * 0.2);
+  float coherence;
+  vec2 inward = inward_of(point, half_size, corner, s.power, 120.0, spacing, 3.0, coherence);
+  float profile = filtered_circular_lens(distance, lens_width, s.softness);
+  float strength = min(max(vw_param(0), 0.0), rim_width) * lens_scale;
+  vec2 offset = inward * profile * coherence * strength;
+  float chromatic_profile = filtered_circular_lens(distance, max(lens_width * 0.5, 1.0), s.softness);
+  vec2 dispersion = inward * coherence * chromatic_profile * s.chromatic * lens_scale;
+  vec3 colour = vec3(background(base + offset + dispersion, s).r, background(base + offset, s).g,
+                     background(base + offset - dispersion, s).b);
+
+  if (s.highlight > 0.0 || s.bevel_shadow > 0.0) {
+    float light = dot(-inward, normalize(vec2(-0.45, -0.89)));
+    float bevel = min(s.bevel, lens_width);
+    float inner_band = exp(-pow((distance - bevel * 0.5) / (bevel * 0.45), 2.0)) * coherence;
+    colour *= 1.0 - s.bevel_shadow * inner_band * (0.5 + 0.5 * max(-light, 0.0));
+    float glint = 0.12 + 0.88 * pow(max(light, 0.0), 1.5) + 0.5 * pow(max(-light, 0.0), 1.5);
+    float band = exp(-distance / s.highlight_width);
+    float shine = clamp(s.highlight * glint * coherence * (1.2 * band + 0.3 * profile), 0.0, 1.0);
+    colour = 1.0 - (1.0 - colour) * (1.0 - shine * vec3(0.94, 0.97, 1.0));
+  }
+  return colour;
+}
+
+// 1: zwwm's kawase-glass.frag, over the blurred wallpaper.
+vec3 frosted(vec2 base, vec2 point, vec2 half_size, float corner, float edge, Settings s) {
+  Settings blurred = s;
+  blurred.blur_mix = 1.0;
+  float depth = max(-edge, 0.0);
+  float rim = clamp(vw_param(1), 1.0, max(min(half_size.x, half_size.y), 1.0));
+  if (depth >= rim) return background(base, blurred);
+  // Quarter-circle lens: flat inside the rim, steepest at the edge.
+  float x = 1.0 - depth / rim;
+  float lens = 1.0 - sqrt(max(1.0 - x * x, 0.0));
+  float coherence;
+  vec2 inward = inward_of(point, half_size, corner, s.power, rim * 1.5, rim * 0.2, 1.5, coherence);
+  vec2 bend = inward * lens * coherence * min(vw_param(0), rim);
+  vec2 fringe = inward * lens * coherence * s.chromatic;
+  return vec3(background(base + bend + fringe, blurred).r, background(base + bend, blurred).g,
+              background(base + bend - fringe, blurred).b);
+}
+
+// 2: Glassify 1.0.
+vec3 simple(vec2 base, vec2 point, vec2 half_size, float corner, float edge, Settings s) {
+  vec2 n = vec2(sdf(point + vec2(1.0, 0.0), half_size, corner, s.power) - sdf(point - vec2(1.0, 0.0), half_size, corner, s.power),
+                sdf(point + vec2(0.0, 1.0), half_size, corner, s.power) - sdf(point - vec2(0.0, 1.0), half_size, corner, s.power));
+  n = dot(n, n) > 1e-8 ? normalize(n) : vec2(0.0);
+  float depth = clamp(-edge / max(vw_param(1), 1.0), 0.0, 1.0);
+  float tilt = 1.0 - sqrt(max(0.0, 1.0 - (1.0 - depth) * (1.0 - depth)));
+  return background(base + n * max(vw_param(0), 0.0) * tilt, s);
+}
+
+// 3: zwwm's island-refract.frag, over the island passes' images.
+vec3 island(vec2 at, vec2 base, Settings s, out float mask) {
+  vec2 position = vw_target_position(at);
+  mask = vw_input_sample(0, position).r;
+  if (mask <= 0.001) return vec3(0.0);
+  // Sobel on the smoothed distance (B), so the bend turns around corners without creasing.
+  const vec2 dx = vec2(3.0, 0.0);
+  const vec2 dy = vec2(0.0, 3.0);
+  float tl = vw_input_sample(1, position - dx - dy).b;
+  float tr = vw_input_sample(1, position + dx - dy).b;
+  float bl = vw_input_sample(1, position - dx + dy).b;
+  float br = vw_input_sample(1, position + dx + dy).b;
+  vec2 gradient = vec2(tr + 2.0 * vw_input_sample(1, position + dx).b + br - tl - 2.0 * vw_input_sample(1, position - dx).b - bl,
+                       bl + 2.0 * vw_input_sample(1, position + dy).b + br - tl - 2.0 * vw_input_sample(1, position - dy).b - tr) /
+                  24.0;
+  float magnitude = length(gradient);
+  vec2 inward = gradient / max(magnitude, 0.0001);
+  vec2 field = vw_input_sample(1, position).rg;
+  float distance = max(field.r, 0.0);
+  float rim_width = max(vw_param(1), 1.0);
+  float lens_width = clamp(field.g, 1.0, rim_width);
+  float lens_scale = lens_width / rim_width;
+  float profile = filtered_circular_lens(distance, lens_width, s.softness);
+  float coherence = smoothstep(0.15, 0.85, magnitude);
+  vec2 bend = inward * profile * coherence;
+  float strength = min(max(vw_param(0), 0.0), rim_width) * lens_scale;
+  vec2 offset = bend * strength;
+  float chromatic_profile = filtered_circular_lens(distance, max(lens_width * 0.5, 1.0), s.softness);
+  vec2 dispersion = inward * coherence * chromatic_profile * s.chromatic * lens_scale;
+  vec3 colour = vec3(background(base + offset + dispersion, s).r, background(base + offset, s).g,
+                     background(base + offset - dispersion, s).b);
+
+  float light = dot(-inward, normalize(vec2(-0.45, -0.89)));
+  float glint = 0.12 + 0.88 * pow(max(light, 0.0), 1.5) + 0.5 * pow(max(-light, 0.0), 1.5);
+  float band = exp(-distance / s.highlight_width);
+  float shine = clamp(s.highlight * glint * coherence * (1.2 * band + 0.3 * profile), 0.0, 1.0);
+  float bevel = min(s.bevel, lens_width);
+  float inner_band = exp(-pow((distance - bevel * 0.5) / (bevel * 0.45), 2.0)) * coherence;
+  colour *= 1.0 - s.bevel_shadow * inner_band * (0.5 + 0.5 * max(-light, 0.0));
+  colour = 1.0 - (1.0 - colour) * (1.0 - shine * vec3(0.94, 0.97, 1.0));
+  return colour;
 }
 
 void main() {
   ivec2 pixel;
   vec2 local;
   if (!vw_begin(pixel, local)) return;
-  vec2 half_size = vw_size() * 0.5;
-  vec2 p = local - half_size;
-  float d = shape(p);
-  float coverage = vw_coverage(d);
   float opacity = clamp(vw_param(3), 0.0, 1.0);
+  Settings s = settings();
+  if (s.style == 3) {
+    if (opacity <= 0.0) return;
+    vec2 at = vec2(pixel) + 0.5;
+    vec2 centre = vw.bounds.xy + vw_size() * 0.5;
+    vec2 base = centre + (at - centre) * (1.0 - clamp(vw_param(2), 0.0, 0.5));
+    float mask;
+    vec3 glass = island(at, base, s, mask) * s.brightness;
+    glass = mix(glass, vw.color2.rgb, clamp(vw.color2.a, 0.0, 1.0) * 0.4);
+    // Upstream's behindAlpha: the glass fills exactly the silhouette.
+    vw_blend(pixel, vec4(glass, 1.0) * (clamp(mask, 0.0, 1.0) * opacity));
+    return;
+  }
+  vec2 half_size = max(vw_size(), vec2(1.0)) * 0.5;
+  vec2 point = local - half_size;
+  float corner = vw_radius();
+  float edge = sdf(point, half_size, corner, s.power);
+  float coverage = clamp(0.5 - edge, 0.0, 1.0);
   if (coverage <= 0.0 || opacity <= 0.0) return;
 
-  float refraction = max(vw_param(0), 0.0);
-  float bezel = max(vw_param(1), 1.0);
-  float magnify = clamp(vw_param(2), 0.0, 0.5);
-
-  // The outward normal: the distance field's gradient.
-  vec2 n = vec2(shape(p + vec2(1.0, 0.0)) - shape(p - vec2(1.0, 0.0)),
-                shape(p + vec2(0.0, 1.0)) - shape(p - vec2(0.0, 1.0)));
-  n = dot(n, n) > 1e-8 ? normalize(n) : vec2(0.0);
-
-  // A rim with a round profile: its surface tilts most at the very edge
-  // and lies flat a bezel's width in, so the bending fades the same way.
-  float depth = clamp(-d / bezel, 0.0, 1.0);
-  float tilt = 1.0 - sqrt(max(0.0, 1.0 - (1.0 - depth) * (1.0 - depth)));
-
-  vec2 centre = vw.bounds.xy + half_size;
+  // The flat middle magnifies a little about the centre.
   vec2 at = vec2(pixel) + 0.5;
-  vec2 source = centre + (at - centre) * (1.0 - magnify) + n * refraction * tilt;
-  vec3 seen = behind(source).rgb;
+  vec2 centre = vw.bounds.xy + half_size;
+  vec2 base = centre + (at - centre) * (1.0 - clamp(vw_param(2), 0.0, 0.5));
 
-  // A faint tint in the theme's colour, as strong as the Background setting.
-  vec3 glass = mix(seen, vw.color.rgb, clamp(vw.color.a, 0.0, 1.0) * 0.4);
+  vec3 glass = s.style == 1   ? frosted(base, point, half_size, corner, edge, s)
+               : s.style == 2 ? simple(base, point, half_size, corner, edge, s)
+                              : liquid(base, point, half_size, corner, edge, s);
+  glass *= s.brightness;
+  // The backdrop colour tints it, as strongly as the Background setting.
+  glass = mix(glass, vw.color.rgb, clamp(vw.color.a, 0.0, 1.0) * 0.4);
   vw_blend(pixel, vec4(glass, 1.0) * (coverage * opacity));
 }

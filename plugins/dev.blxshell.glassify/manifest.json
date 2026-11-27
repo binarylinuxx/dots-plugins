@@ -4,8 +4,8 @@
   "type": "plugin",
   "id": "dev.blxshell.glassify",
   "name": "Glassify",
-  "version": "1.0.0",
-  "description": "Turns every pill, card and sheet on the lock screen into liquid glass: real refraction of the wallpaper through rounded edges, with no highlights or glare.",
+  "version": "3.0.0",
+  "description": "Turns every pill, card and sheet on the lock screen into glass that refracts the wallpaper: zwwm's island glass (in full, its 18 passes), its liquid and frosted Kawase glass, or a simple rim.",
   "authors": [
     {
       "name": "binarylinuxx",
@@ -36,16 +36,268 @@
       "params": [
         {
           "key": "refraction",
-          "default": 28
+          "default": 50
         },
         {
           "key": "bezel",
-          "default": 22
+          "default": 50
         },
         {
           "key": "magnify",
-          "default": 0.04
+          "default": 0
         }
+      ],
+      "data": [
+        {
+          "key": "style",
+          "default": 0
+        },
+        {
+          "key": "rounding_power",
+          "default": 2
+        },
+        {
+          "key": "chromatic",
+          "default": 1.2
+        },
+        {
+          "key": "edge_softness",
+          "default": 1
+        },
+        {
+          "key": "normal_smoothing",
+          "default": 0
+        },
+        {
+          "key": "blur_mix",
+          "default": 0
+        },
+        {
+          "key": "blur_radius",
+          "default": 6
+        },
+        {
+          "key": "highlight",
+          "default": 0
+        },
+        {
+          "key": "highlight_width",
+          "default": 1
+        },
+        {
+          "key": "bevel_width",
+          "default": 6
+        },
+        {
+          "key": "bevel_shadow",
+          "default": 0
+        },
+        {
+          "key": "brightness",
+          "default": 1
+        }
+      ],
+      "passes": [
+        {
+          "shader": "lib/island-mask.vws",
+          "output": "mask",
+          "params": [
+            0.2
+          ]
+        },
+        {
+          "shader": "lib/island-smooth.vws",
+          "output": "seed_x",
+          "inputs": [
+            "mask"
+          ],
+          "params": [
+            1,
+            0,
+            1
+          ]
+        },
+        {
+          "shader": "lib/island-smooth.vws",
+          "output": "seed_mask",
+          "inputs": [
+            "seed_x"
+          ],
+          "params": [
+            0,
+            1,
+            1
+          ]
+        },
+        {
+          "shader": "lib/island-seed.vws",
+          "output": "step",
+          "inputs": [
+            "seed_mask"
+          ]
+        },
+        {
+          "shader": "lib/island-jump.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            64
+          ]
+        },
+        {
+          "shader": "lib/island-jump.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            32
+          ]
+        },
+        {
+          "shader": "lib/island-jump.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            16
+          ]
+        },
+        {
+          "shader": "lib/island-jump.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            8
+          ]
+        },
+        {
+          "shader": "lib/island-jump.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            4
+          ]
+        },
+        {
+          "shader": "lib/island-jump.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            2
+          ]
+        },
+        {
+          "shader": "lib/island-jump.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            1
+          ]
+        },
+        {
+          "shader": "lib/island-jump.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            1
+          ]
+        },
+        {
+          "shader": "lib/island-height.vws",
+          "output": "step",
+          "inputs": [
+            "step",
+            "seed_mask"
+          ],
+          "params": [
+            75
+          ]
+        },
+        {
+          "shader": "lib/island-smooth.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            1,
+            0,
+            2
+          ]
+        },
+        {
+          "shader": "lib/island-smooth.vws",
+          "output": "step",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            0,
+            1,
+            2
+          ]
+        },
+        {
+          "shader": "lib/island-smooth.vws",
+          "output": "direction",
+          "inputs": [
+            "step"
+          ],
+          "params": [
+            1,
+            0,
+            10
+          ]
+        },
+        {
+          "shader": "lib/island-smooth.vws",
+          "output": "direction",
+          "inputs": [
+            "direction"
+          ],
+          "params": [
+            0,
+            1,
+            10
+          ]
+        },
+        {
+          "shader": "lib/island-ridge.vws",
+          "output": "distance",
+          "inputs": [
+            "step",
+            "direction"
+          ],
+          "params": [
+            {
+              "key": "bezel",
+              "default": 50
+            }
+          ]
+        }
+      ],
+      "passesWhen": {
+        "key": "style",
+        "equals": 3
+      },
+      "padding": 64,
+      "inputs": [
+        "mask",
+        "distance"
       ]
     },
     "permissions": []

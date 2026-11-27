@@ -1,0 +1,65 @@
+#version 450
+// Port of zwwm's island-ridge.comp: the ridge (medial axis) distance reached
+// walking up the distance gradient, where the lens flattens. Input 0 the
+// signed distance, 1 the widely smoothed one that gives the direction.
+// R: signed distance; G: ridge distance; B: smoothed distance.
+//
+// @vw name: Island ridge
+// @vw params: rim_width_px
+#define VW_USE_TARGETS
+#include <vw/shader.glsl>
+
+const int STEPS = 24;
+
+float field_at(vec2 p, vec2 size) { return vw_input_sample(0, clamp(p, vec2(0.5), size - 0.5)).r; }
+float direction_at(vec2 p, vec2 size) { return vw_input_sample(1, clamp(p, vec2(0.5), size - 0.5)).r; }
+
+void main() {
+  ivec2 pixel;
+  if (!vw_pass_begin(pixel)) return;
+  vec2 size = vw_target_size();
+  vec2 p = vec2(pixel) + 0.5;
+  float rim_width = vw_param(0);
+  float here = field_at(p, size);
+  float smoothed = direction_at(p, size);
+  vec2 gradient = vec2(direction_at(p + vec2(1.5, 0.0), size) - direction_at(p - vec2(1.5, 0.0), size),
+                       direction_at(p + vec2(0.0, 1.5), size) - direction_at(p - vec2(0.0, 1.5), size));
+  float magnitude = length(gradient);
+  if (magnitude < 0.0001) {
+    vw_store(pixel, vec4(here, max(here, 0.0), smoothed, 1.0));
+    return;
+  }
+  vec2 dir = gradient / magnitude;
+  float step_px = max(rim_width, 1.0) / float(STEPS);
+
+  float previous = here;
+  float best = here;
+  float before = here;
+  float after = here;
+  bool fell = false;
+  for (int i = 1; i <= STEPS; i++) {
+    float value = field_at(p + dir * (step_px * float(i)), size);
+    if (value > best) {
+      before = previous;
+      best = value;
+      after = value;
+    } else if (after == best) {
+      after = value;
+    }
+    if (value < best - 0.5 * step_px) {
+      fell = true;
+      break;
+    }
+    previous = value;
+  }
+  float ridge = best + 0.5 * abs((best - before) - (best - after));
+  if (after == best) ridge = best;
+  // Still sloping across the walk at its end: the adjacent side, not a far side.
+  if (!fell) {
+    vec2 end = p + dir * (step_px * float(STEPS));
+    vec2 slope = vec2(direction_at(end + vec2(1.5, 0.0), size) - direction_at(end - vec2(1.5, 0.0), size),
+                      direction_at(end + vec2(0.0, 1.5), size) - direction_at(end - vec2(0.0, 1.5), size)) / 3.0;
+    ridge = mix(ridge, max(ridge, rim_width), smoothstep(0.25, 0.75, length(slope)));
+  }
+  vw_store(pixel, vec4(here, max(ridge, 0.0), smoothed, 1.0));
+}

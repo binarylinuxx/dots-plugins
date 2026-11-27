@@ -1,0 +1,32 @@
+#version 450
+// Port of zwwm's island-jump.comp: one jump-flood step over input 0, keeping
+// each pixel's nearest boundary seed.
+//
+// @vw name: Island jump
+// @vw params: jump_px
+#define VW_USE_TARGETS
+#include <vw/shader.glsl>
+
+void main() {
+  ivec2 pixel;
+  if (!vw_pass_begin(pixel)) return;
+  vec2 size = vw_target_size();
+  vec2 p = vec2(pixel) + 0.5;
+  vec4 best = vec4(0.0);
+  float best_distance = 1.0e20;
+  for (int y = -1; y <= 1; y++) {
+    for (int x = -1; x <= 1; x++) {
+      vec2 q = p + vec2(float(x), float(y)) * vw_param(0);
+      if (any(lessThan(q, vec2(0.5))) || any(greaterThan(q, size - 0.5))) continue;
+      vec4 candidate = vw_input_load(0, ivec2(floor(q)));
+      if (candidate.b < 0.5) continue;
+      vec2 delta = candidate.rg + (q - p);
+      float distance_squared = dot(delta, delta);
+      if (distance_squared < best_distance) {
+        best_distance = distance_squared;
+        best = vec4(delta, 1.0, 1.0);
+      }
+    }
+  }
+  vw_store(pixel, best);
+}

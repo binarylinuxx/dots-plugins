@@ -1,0 +1,28 @@
+#version 450
+// Port of zwwm's island-smooth.comp: a 5-tap blur of input 0 along one axis.
+//
+// @vw name: Island smooth
+// @vw params: axis_x, axis_y, smoothing_px
+#define VW_USE_TARGETS
+#include <vw/shader.glsl>
+
+// Odd reflection past the capture edge keeps the smoothed slope straight there.
+float field_at(vec2 position, vec2 size) {
+  vec2 low = vec2(0.5);
+  vec2 high = size - 0.5;
+  vec2 edge = clamp(position, low, high);
+  if (edge == position) return vw_input_sample(0, position).r;
+  return 2.0 * vw_input_sample(0, edge).r - vw_input_sample(0, clamp(2.0 * edge - position, low, high)).r;
+}
+
+void main() {
+  ivec2 pixel;
+  if (!vw_pass_begin(pixel)) return;
+  vec2 size = vw_target_size();
+  vec2 p = vec2(pixel) + 0.5;
+  vec2 delta = vw_param(2) * vec2(vw_param(0), vw_param(1));
+  float distance = field_at(p, size) * 0.375;
+  distance += (field_at(p - delta, size) + field_at(p + delta, size)) * 0.25;
+  distance += (field_at(p - delta * 2.0, size) + field_at(p + delta * 2.0, size)) * 0.0625;
+  vw_store(pixel, vec4(distance, 0.0, 0.0, 1.0));
+}

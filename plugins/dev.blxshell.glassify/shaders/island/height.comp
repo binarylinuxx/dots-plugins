@@ -1,0 +1,18 @@
+#version 450
+// Port of zwwm's island-height.comp: signed distance to the silhouette edge,
+// positive inside. Input 0 the jump-flood field, 1 the silhouette.
+//
+// @vw name: Island height
+// @vw params: distance_limit_px
+#define VW_USE_TARGETS
+#include <vw/shader.glsl>
+
+void main() {
+  ivec2 pixel;
+  if (!vw_pass_begin(pixel)) return;
+  vec4 nearest = vw_input_load(0, pixel);
+  float limit = vw_param(0);
+  float distance = nearest.b < 0.5 ? limit : min(length(nearest.rg), limit);
+  float mask = vw_input_load(1, pixel).r;
+  vw_store(pixel, vec4(mask >= 0.5 ? distance : -distance, 0.0, 0.0, 1.0));
+}

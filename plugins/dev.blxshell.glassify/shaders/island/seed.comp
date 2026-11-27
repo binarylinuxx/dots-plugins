@@ -1,0 +1,34 @@
+#version 450
+// Port of zwwm's island-seed.comp: where the mask (input 0) crosses one half,
+// the sub-pixel offset to that boundary. RG offset in pixels, B a valid seed.
+//
+// @vw name: Island seed
+#define VW_USE_TARGETS
+#include <vw/shader.glsl>
+
+float mask_at(vec2 position, vec2 size) {
+  if (any(lessThan(position, vec2(0.0))) || any(greaterThan(position, size))) return 0.0;
+  return vw_input_sample(0, position).r;
+}
+
+void main() {
+  ivec2 pixel;
+  if (!vw_pass_begin(pixel)) return;
+  vec2 size = vw_target_size();
+  vec2 p = vec2(pixel) + 0.5;
+  float center = mask_at(p, size);
+  float left = mask_at(p - vec2(1.0, 0.0), size);
+  float right = mask_at(p + vec2(1.0, 0.0), size);
+  float top = mask_at(p - vec2(0.0, 1.0), size);
+  float bottom = mask_at(p + vec2(0.0, 1.0), size);
+  float low = min(center, min(min(left, right), min(top, bottom)));
+  float high = max(center, max(max(left, right), max(top, bottom)));
+  if (low >= 0.5 || high < 0.5) {
+    vw_store(pixel, vec4(0.0));
+    return;
+  }
+  vec2 gradient = 0.5 * vec2(right - left, bottom - top);
+  float magnitude = length(gradient);
+  vec2 offset = gradient / max(magnitude, 0.0001) * clamp((center - 0.5) / max(magnitude, 0.0001), -1.0, 1.0);
+  vw_store(pixel, vec4(-offset, 1.0, 1.0));
+}

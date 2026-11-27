@@ -152,6 +152,12 @@ vw::Widget glyph(vw::Ui& ui, const blxshell::Host& host, const std::string& name
 struct Material {
   std::string shader;
   std::array<float, 4> params{};
+  std::vector<float> data;  // the material's further settings (shader_data)
+  // Passes before it (e.g. Glassify's island glass): then it is the last
+  // pass, and the card itself transparent with the colour in color2.
+  std::vector<vw::ShaderPass> passes;
+  std::vector<std::string> inputs;
+  float padding = 0;
 };
 
 std::optional<Material> material_of(const blxshell::Host& host) {
@@ -163,6 +169,22 @@ std::optional<Material> material_of(const blxshell::Host& host) {
   if (given.contains("params") && given["params"].is_array())
     for (std::size_t index = 0; index < 3 && index < given["params"].size(); ++index)
       if (given["params"][index].is_number()) material.params[index] = given["params"][index].get<float>();
+  if (given.contains("data") && given["data"].is_array())
+    for (const json& value : given["data"]) material.data.push_back(value.is_number() ? value.get<float>() : 0.0F);
+  if (given.contains("passes") && given["passes"].is_array()) {
+    for (const json& entry : given["passes"]) {
+      vw::ShaderPass pass;
+      pass.shader = entry.value("shader", "");
+      pass.output = entry.value("output", "");
+      for (const json& input : entry.value("inputs", json::array())) pass.inputs.push_back(input.get<std::string>());
+      const json params = entry.value("params", json::array());
+      for (std::size_t index = 0; index < 4 && index < params.size(); ++index) pass.params[index] = params[index].get<float>();
+      for (const json& value : entry.value("data", json::array())) pass.data.push_back(value.get<float>());
+      material.passes.push_back(std::move(pass));
+    }
+    for (const json& input : given.value("inputs", json::array())) material.inputs.push_back(input.get<std::string>());
+    material.padding = given.value("padding", 0.0F);
+  }
   return material;
 }
 
@@ -174,8 +196,18 @@ vw::Widget card(vw::Ui& ui, vw::Color colour, float radius, float padding, Conte
   vw::RectangleProps props{.width = 1, .height = 1, .color = colour};
   if (host != nullptr)
     if (const auto material = material_of(*host)) {
-      props.shader = material->shader;
-      props.shader_params = material->params;
+      if (material->passes.empty()) {
+        props.shader = material->shader;
+        props.shader_params = material->params;
+        props.shader_data = material->data;
+      } else {
+        props.shader_passes = material->passes;
+        props.shader_passes.push_back({.shader = material->shader, .params = material->params, .data = material->data,
+                                       .inputs = material->inputs});
+        props.target_padding = material->padding;
+        props.color2 = colour;
+        props.color[3] = 0;
+      }
     }
   const vw::Widget back = ui.rectangle(props);
   const vw::Widget inside = content();

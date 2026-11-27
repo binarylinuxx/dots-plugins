@@ -1,26 +1,98 @@
 // Glassify: lib/glass.vws (shaders/glass.comp) draws the lock screen's
-// backdrops as glass; this is its page in Settings. The store keeps:
-// refraction, bezel, magnify.
+// backdrops as glass; this is its page in Settings. The store keeps the
+// material's settings: refraction, bezel (the rim), magnify, then style,
+// rounding_power, chromatic, edge_softness, normal_smoothing, blur_mix,
+// blur_radius, highlight, highlight_width, bevel_width, bevel_shadow,
+// brightness (manifest.json, lockMaterial).
 let [ vw.ui as ui, vw.layout as layout ] in
 
 view Settings(state, actions) {
-    let refraction = actions.get("refraction", 28)
-    let bezel = actions.get("bezel", 22)
-    let magnify = actions.get("magnify", 0.04)
-    layout.Column(gap: 16, width: state.width, align: start) {
-        ui.Text(text: "Every pill, card and the password sheet on the lock screen becomes glass. A sharp wallpaper (Settings → Lock screen → Blur the wallpaper off) shows the refraction best; Background in the layout editor sets how strongly each is tinted.",
+    let style = actions.get("style", 0)
+    let style_name = style == 1 ? "Frosted (Kawase)" : (style == 2 ? "Simple" : (style == 3 ? "Island (multi-pass)" : "Liquid (single pass)"))
+    let refraction = actions.get("refraction", 50)
+    let rim = actions.get("bezel", 50)
+    let magnify = actions.get("magnify", 0)
+    let power = actions.get("rounding_power", 2)
+    let chromatic = actions.get("chromatic", 1.2)
+    let softness = actions.get("edge_softness", 1)
+    let smoothing = actions.get("normal_smoothing", 0)
+    let blur_mix = actions.get("blur_mix", 0)
+    let blur_radius = actions.get("blur_radius", 6)
+    let highlight = actions.get("highlight", 0)
+    let highlight_width = actions.get("highlight_width", 1)
+    let bevel = actions.get("bevel_width", 6)
+    let bevel_shadow = actions.get("bevel_shadow", 0)
+    let brightness = actions.get("brightness", 1)
+    layout.Column(gap: 14, width: state.width, align: start) {
+        ui.Text(text: "Every pill, card and the password sheet on the lock screen becomes glass. A sharp wallpaper (Settings → Lock screen → Blur the wallpaper off) shows the refraction best; the layout editor's Background and backdrop colour set each one's tint.",
                 font: state.fonts.text, size: 14, color: state.colours.textMuted, max_width: state.width)
+        layout.Row(gap: 12, width: state.width, justify: space-between) {
+            ui.Text(text: "Style", font: state.fonts.text, size: 15, color: state.colours.text)
+            ui.Dropdown(id: "glassify-style", options: ["Island (multi-pass)", "Liquid (single pass)", "Frosted (Kawase)", "Simple"], value: style_name, width: 220,
+                        color: state.colours.surfaceContainerHighest, text_color: state.colours.text,
+                        on_change: (picked) => actions.set("style", picked == "Frosted (Kawase)" ? 1 : (picked == "Simple" ? 2 : (picked == "Island (multi-pass)" ? 3 : 0))))
+        }
+
+        ui.Text(text: "Lens", font: state.fonts.display, size: 17, color: state.colours.primary)
         ui.Text(text: "Refraction: " + refraction + " px", font: state.fonts.text, size: 15, color: state.colours.text)
-        ui.Slider(id: "glassify-refraction", value: refraction, min: 0, max: 80, step: 1, width: state.width,
+        ui.Slider(id: "glassify-refraction", value: refraction, min: 0, max: 100, step: 1, width: state.width,
                   color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
                   on_change: (value) => actions.set("refraction", value))
-        ui.Text(text: "Rounded edge: " + bezel + " px", font: state.fonts.text, size: 15, color: state.colours.text)
-        ui.Slider(id: "glassify-bezel", value: bezel, min: 4, max: 60, step: 1, width: state.width,
+        ui.Text(text: "Rim width: " + rim + " px", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-rim", value: rim, min: 4, max: 100, step: 1, width: state.width,
                   color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
                   on_change: (value) => actions.set("bezel", value))
+        ui.Text(text: "Colour fringe: " + chromatic + " px", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-chromatic", value: chromatic, min: 0, max: 5, step: 0.1, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("chromatic", value))
         ui.Text(text: "Magnification: " + magnify, font: state.fonts.text, size: 15, color: state.colours.text)
         ui.Slider(id: "glassify-magnify", value: magnify, min: 0, max: 0.2, step: 0.01, width: state.width,
                   color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
                   on_change: (value) => actions.set("magnify", value))
+        ui.Text(text: "Corner shape: " + power + " (2 round, higher squarer)", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-power", value: power, min: 1, max: 8, step: 0.5, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("rounding_power", value))
+        ui.Text(text: "Edge softness: " + softness + " px", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-softness", value: softness, min: 0, max: 8, step: 0.5, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("edge_softness", value))
+        ui.Text(text: "Bend smoothing: " + (smoothing == 0 ? "automatic" : smoothing + " px"), font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-smoothing", value: smoothing, min: 0, max: 40, step: 1, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("normal_smoothing", value))
+
+        ui.Text(text: "Behind the glass", font: state.fonts.display, size: 17, color: state.colours.primary)
+        ui.Text(text: "Blur (Island, Liquid and Simple; Frosted always blurs): " + blur_mix, font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-blur-mix", value: blur_mix, min: 0, max: 1, step: 0.05, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("blur_mix", value))
+        ui.Text(text: "Blur radius: " + blur_radius + " px", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-blur-radius", value: blur_radius, min: 0, max: 24, step: 1, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("blur_radius", value))
+        ui.Text(text: "Brightness: " + brightness, font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-brightness", value: brightness, min: 0.3, max: 1.5, step: 0.05, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("brightness", value))
+
+        ui.Text(text: "Light (Island and Liquid; off by default)", font: state.fonts.display, size: 17, color: state.colours.primary)
+        ui.Text(text: "Highlight: " + highlight, font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-highlight", value: highlight, min: 0, max: 1, step: 0.05, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("highlight", value))
+        ui.Text(text: "Highlight width: " + highlight_width + " px", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-highlight-width", value: highlight_width, min: 0.5, max: 12, step: 0.5, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("highlight_width", value))
+        ui.Text(text: "Inner shadow: " + bevel_shadow, font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-bevel-shadow", value: bevel_shadow, min: 0, max: 0.6, step: 0.05, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("bevel_shadow", value))
+        ui.Text(text: "Inner shadow width: " + bevel + " px", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-bevel", value: bevel, min: 1, max: 24, step: 1, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("bevel_width", value))
     }
 }
