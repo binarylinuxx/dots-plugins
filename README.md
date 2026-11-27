@@ -11,6 +11,7 @@ Everything here is reviewed before it's merged.
 | ![](plugins/dev.blxshell.netspeed/screenshot.png) | [Network speed](plugins/dev.blxshell.netspeed) | Live download and upload rates of the active connection |
 | ![](plugins/dev.blxshell.pomodoro/screenshot.png) | [Pomodoro](plugins/dev.blxshell.pomodoro) | A focus timer with breaks, a countdown ring and notifications |
 | ![](plugins/dev.blxshell.desktop/screenshot.png) | [Desktop icons](plugins/dev.blxshell.desktop) | The files in your desktop folder as icons on the wallpaper, each with a popup of actions |
+| ![](plugins/dev.blxshell.lockscreen/thumbnail.svg) | [Lock screen widgets](plugins/dev.blxshell.lockscreen) | A greeting, a message card, a calendar, a countdown and system info, placed with the lock screen layout editor |
 
 ## Installing
 
@@ -47,6 +48,11 @@ folder set in its settings) on the wallpaper, with file-type icons, image
 thumbnails and app launchers. Click an icon for its actions: Open, Open with
 another app, Show in folder, Copy path, Move to trash (Run for launchers).
 Double-click opens it. Needs a blxshell with desktop item support.
+
+**Lock screen widgets**: add them in the lock screen's layout editor
+(**Settings → Lock screen → Edit layout → Add**), then drag and resize them
+like the clock. Their texts, the countdown's date and the calendar's first
+weekday are set in **Settings → Plugins**.
 
 Each one draws itself in Facet (`plugin.facet`) on a small Python backend
 using only the standard library. Their READMEs list the controls.

@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/binarylinuxx/dots/main/schemas/manifest.schema.json",
+  "schema": 1,
+  "type": "plugin",
+  "id": "dev.blxshell.lockscreen",
+  "name": "Lock screen widgets",
+  "version": "1.0.0",
+  "description": "A greeting, a message card, this month's calendar, a countdown and your machine's name and uptime, for the lock screen. Place and size them with the layout editor.",
+  "authors": [
+    {
+      "name": "binarylinuxx",
+      "url": "https://github.com/binarylinuxx"
+    }
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/binarylinuxx/dots-plugins",
+  "tags": [
+    "lockscreen",
+    "calendar",
+    "greeting",
+    "widgets"
+  ],
+  "previews": [
+    "thumbnail.svg"
+  ],
+  "project": "blxshell",
+  "blxshell": ">=0.1.0",
+  "compositors": [
+    "any"
+  ],
+  "plugin": {
+    "api": 2,
+    "facet": "plugin.facet",
+    "native": "lib/plugin.so",
+    "permissions": [
+      "native"
+    ]
+  }
+}
