@@ -1,0 +1,63 @@
+#version 450
+// Liquid glass for blxshell's lock screen: each backdrop becomes a slab of
+// glass with rounded edges. Light through the rim bends in from beyond the
+// edge, the body magnifies a little, and the theme tints it faintly. No
+// highlights, rims or glare: only refraction.
+//
+//   shader_params  0 refraction  how far the rim bends light, in pixels
+//                  1 bezel       how wide the rounded rim is, in pixels
+//                  2 magnify     how much the body enlarges what is behind
+//                  3 opacity     the item's opacity (blxshell sets it)
+//   colour         the tint; its alpha is the user's Background setting
+//
+// @vw name: Liquid glass
+// @vw params: refraction, bezel, magnify, opacity
+#define VW_USE_BACKDROP
+#include <vw/shader.glsl>
+
+float shape(vec2 p) { return vw_rounded_box(p, vw_size() * 0.5, vw_radius()); }
+
+// The backdrop between pixels: refraction moves by fractions of one.
+vec4 behind(vec2 at) {
+  vec2 p = at - 0.5;
+  ivec2 i = ivec2(floor(p));
+  vec2 f = fract(p);
+  vec4 top = mix(vw_backdrop(i), vw_backdrop(i + ivec2(1, 0)), f.x);
+  vec4 bottom = mix(vw_backdrop(i + ivec2(0, 1)), vw_backdrop(i + ivec2(1, 1)), f.x);
+  return mix(top, bottom, f.y);
+}
+
+void main() {
+  ivec2 pixel;
+  vec2 local;
+  if (!vw_begin(pixel, local)) return;
+  vec2 half_size = vw_size() * 0.5;
+  vec2 p = local - half_size;
+  float d = shape(p);
+  float coverage = vw_coverage(d);
+  float opacity = clamp(vw_param(3), 0.0, 1.0);
+  if (coverage <= 0.0 || opacity <= 0.0) return;
+
+  float refraction = max(vw_param(0), 0.0);
+  float bezel = max(vw_param(1), 1.0);
+  float magnify = clamp(vw_param(2), 0.0, 0.5);
+
+  // The outward normal: the distance field's gradient.
+  vec2 n = vec2(shape(p + vec2(1.0, 0.0)) - shape(p - vec2(1.0, 0.0)),
+                shape(p + vec2(0.0, 1.0)) - shape(p - vec2(0.0, 1.0)));
+  n = dot(n, n) > 1e-8 ? normalize(n) : vec2(0.0);
+
+  // A rim with a round profile: its surface tilts most at the very edge
+  // and lies flat a bezel's width in, so the bending fades the same way.
+  float depth = clamp(-d / bezel, 0.0, 1.0);
+  float tilt = 1.0 - sqrt(max(0.0, 1.0 - (1.0 - depth) * (1.0 - depth)));
+
+  vec2 centre = vw.bounds.xy + half_size;
+  vec2 at = vec2(pixel) + 0.5;
+  vec2 source = centre + (at - centre) * (1.0 - magnify) + n * refraction * tilt;
+  vec3 seen = behind(source).rgb;
+
+  // A faint tint in the theme's colour, as strong as the Background setting.
+  vec3 glass = mix(seen, vw.color.rgb, clamp(vw.color.a, 0.0, 1.0) * 0.4);
+  vw_blend(pixel, vec4(glass, 1.0) * (coverage * opacity));
+}

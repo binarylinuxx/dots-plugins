@@ -4,7 +4,7 @@
   "type": "plugin",
   "id": "dev.blxshell.lockscreen",
   "name": "Lock screen widgets",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "A greeting, a message card, this month's calendar, a countdown and your machine's name and uptime, for the lock screen. Place and size them with the layout editor.",
   "authors": [
     {

@@ -26,6 +26,10 @@
     {
       "id": "dev.blxshell.lockscreen",
       "path": "plugins/dev.blxshell.lockscreen"
+    },
+    {
+      "id": "dev.blxshell.glassify",
+      "path": "plugins/dev.blxshell.glassify"
     }
   ]
 }

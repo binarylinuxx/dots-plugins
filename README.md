@@ -12,6 +12,7 @@ Everything here is reviewed before it's merged.
 | ![](plugins/dev.blxshell.pomodoro/screenshot.png) | [Pomodoro](plugins/dev.blxshell.pomodoro) | A focus timer with breaks, a countdown ring and notifications |
 | ![](plugins/dev.blxshell.desktop/screenshot.png) | [Desktop icons](plugins/dev.blxshell.desktop) | The files in your desktop folder as icons on the wallpaper, each with a popup of actions |
 | ![](plugins/dev.blxshell.lockscreen/thumbnail.svg) | [Lock screen widgets](plugins/dev.blxshell.lockscreen) | A greeting, a message card, a calendar, a countdown and system info, placed with the lock screen layout editor |
+| ![](plugins/dev.blxshell.glassify/thumbnail.svg) | [Glassify](plugins/dev.blxshell.glassify) | The whole lock screen as liquid glass: real refraction through rounded edges, no highlights |
 
 ## Installing
 

@@ -14,6 +14,7 @@
 #include <nlohmann/json.hpp>
 
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cstdlib>
 #include <ctime>
@@ -67,6 +68,18 @@ float backdrop(const blxshell::Host& host, float base) {
   return base;
 }
 
+// The backdrop colour the user picked for this widget or the lock screen;
+// the theme's surface colour when none.
+vw::Color backdrop_tint(const blxshell::Host& host) {
+  const json context = parse(host.context());
+  if (context.is_object() && context.contains("lock") && context["lock"].contains("backdropColour")) {
+    const json& rgb = context["lock"]["backdropColour"];
+    if (rgb.is_array() && rgb.size() == 3 && rgb[0].is_number())
+      return vw::Color{rgb[0].get<float>(), rgb[1].get<float>(), rgb[2].get<float>(), 1.0F};
+  }
+  return host.colour("surfaceContainerHigh");
+}
+
 bool editing(const blxshell::Host& host) {
   const json context = parse(host.context());
   return context.is_object() && context.contains("lock") && context["lock"].value("editing", false);
@@ -118,10 +131,37 @@ vw::Widget glyph(vw::Ui& ui, const blxshell::Host& host, const std::string& name
   return ui.text({.text = name, .font = host.font("icon"), .size = size, .color = colour});
 }
 
-// A rounded background sized to its content, built first so it sits under it.
+// The lock screen's material (a plugin's shader, e.g. Glassify's glass), when
+// one is installed: the cards are drawn in it like the shell's own.
+struct Material {
+  std::string shader;
+  std::array<float, 4> params{};
+};
+
+std::optional<Material> material_of(const blxshell::Host& host) {
+  const json context = parse(host.context());
+  if (!context.is_object() || !context.contains("lock") || !context["lock"].contains("material")) return std::nullopt;
+  const json& given = context["lock"]["material"];
+  if (!given.is_object() || !given.value("shader", json()).is_string()) return std::nullopt;
+  Material material{given["shader"].get<std::string>(), {0, 0, 0, 1}};
+  if (given.contains("params") && given["params"].is_array())
+    for (std::size_t index = 0; index < 3 && index < given["params"].size(); ++index)
+      if (given["params"][index].is_number()) material.params[index] = given["params"][index].get<float>();
+  return material;
+}
+
+// A rounded background sized to its content, built first so it sits under
+// it; in the lock material when `host` has one.
 template <class Content>
-vw::Widget card(vw::Ui& ui, vw::Color colour, float radius, float padding, Content content) {
-  const vw::Widget back = ui.rectangle({.width = 1, .height = 1, .color = colour});
+vw::Widget card(vw::Ui& ui, vw::Color colour, float radius, float padding, Content content,
+                const blxshell::Host* host = nullptr) {
+  vw::RectangleProps props{.width = 1, .height = 1, .color = colour};
+  if (host != nullptr)
+    if (const auto material = material_of(*host)) {
+      props.shader = material->shader;
+      props.shader_params = material->params;
+    }
+  const vw::Widget back = ui.rectangle(props);
   const vw::Widget inside = content();
   const vw::Widget body = ui.row({inside}, {.padding = padding});
   auto& rectangle = ui.scene().rectangles[back.begin];
@@ -170,7 +210,7 @@ vw::Widget message(vw::Ui& ui, blxshell::Host& host) {
     body = "Write it in Settings → Plugins → Lock screen widgets";
   }
   const std::string icon = text_of(host, "message_glyph", "info");
-  return card(ui, alpha(host.colour("surfaceContainerHigh"), backdrop(host, 0.88F)), 26 * k, 18 * k, [&] {
+  return card(ui, alpha(backdrop_tint(host), backdrop(host, 0.88F)), 26 * k, 18 * k, [&] {
     // vw lays out in build order: the badge first, then the words.
     const vw::Widget badge = card(ui, host.colour("primaryContainer"), 20 * k, 9 * k,
                                   [&] { return glyph(ui, host, icon, 22 * k, host.colour("primary")); });
@@ -183,7 +223,7 @@ vw::Widget message(vw::Ui& ui, blxshell::Host& host) {
                                        .max_width = 380 * k}));
     const vw::Widget text = ui.column(lines, {.gap = 4 * k, .align = vw::Align::start});
     return ui.row({badge, text}, {.gap = 14 * k, .align = vw::Align::center});
-  });
+  }, &host);
 }
 
 int days_in(int year, int month) {  // month 0-11
@@ -209,7 +249,7 @@ vw::Widget calendar(vw::Ui& ui, blxshell::Host& host) {
   const auto centred = [&](vw::Widget inside) {
     return ui.row({inside}, {.width = cell, .height = cell, .justify = vw::Justify::center, .align = vw::Align::center});
   };
-  return card(ui, alpha(host.colour("surfaceContainerHigh"), backdrop(host, 0.88F)), 28 * k, 16 * k, [&] {
+  return card(ui, alpha(backdrop_tint(host), backdrop(host, 0.88F)), 28 * k, 16 * k, [&] {
     std::vector<vw::Widget> rows;
     rows.push_back(label(ui, std::format("{} {}", months[month], year),
                          {.font = host.font("display"), .size = 16 * k, .weight = vw::weight::semibold,
@@ -243,7 +283,7 @@ vw::Widget calendar(vw::Ui& ui, blxshell::Host& host) {
       rows.push_back(ui.row(week, {.gap = 2 * k}));
     }
     return ui.column(rows, {.gap = 4 * k, .align = vw::Align::start});
-  });
+  }, &host);
 }
 
 // Days from today to YYYY-MM-DD, local time; nullopt when it isn't a date.
@@ -277,13 +317,13 @@ vw::Widget countdown(vw::Ui& ui, blxshell::Host& host) {
   const std::string words = *days == 0 ? event
                             : *days > 0 ? std::format("{} until {}", count == 1 ? "day" : "days", event)
                                         : std::format("{} since {}", count == 1 ? "day" : "days", event);
-  return card(ui, alpha(host.colour("surfaceContainerHigh"), backdrop(host, 0.88F)), 26 * k, 16 * k, [&] {
+  return card(ui, alpha(backdrop_tint(host), backdrop(host, 0.88F)), 26 * k, 16 * k, [&] {
     const vw::Widget big = label(ui, number, {.font = host.font("display"), .size = 40 * k, .weight = vw::weight::black,
                                               .colour = host.colour("primary")});
     const vw::Widget small = label(ui, words, {.font = host.font("text"), .size = 14 * k, .weight = vw::weight::medium,
                                                .colour = host.colour("text"), .max_width = 260 * k});
     return ui.row({big, small}, {.gap = 14 * k, .align = vw::Align::center});
-  });
+  }, &host);
 }
 
 std::string uptime() {
@@ -306,7 +346,7 @@ vw::Widget system_line(vw::Ui& ui, blxshell::Host& host) {
   std::vector<Part> parts{{"computer", names.nodename}};
   if (flag_of(host, "system_uptime", true)) parts.push_back({"schedule", uptime()});
   if (flag_of(host, "system_kernel", false)) parts.push_back({"memory", names.release});
-  return card(ui, alpha(host.colour("surfaceContainerHigh"), backdrop(host, 0.78F)), 22 * k, 11 * k, [&] {
+  return card(ui, alpha(backdrop_tint(host), backdrop(host, 0.78F)), 22 * k, 11 * k, [&] {
     std::vector<vw::Widget> items;
     for (const Part& part : parts) {
       if (part.text.empty()) continue;
@@ -315,7 +355,7 @@ vw::Widget system_line(vw::Ui& ui, blxshell::Host& host) {
                                             .colour = host.colour("text")}));
     }
     return ui.row(items, {.gap = 8 * k, .padding = 4 * k, .align = vw::Align::center});
-  });
+  }, &host);
 }
 
 class LockWidgets : public blxshell::Plugin {

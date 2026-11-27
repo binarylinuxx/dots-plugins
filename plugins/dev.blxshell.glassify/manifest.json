@@ -1,0 +1,53 @@
+{
+  "$schema": "https://raw.githubusercontent.com/binarylinuxx/dots/main/schemas/manifest.schema.json",
+  "schema": 1,
+  "type": "plugin",
+  "id": "dev.blxshell.glassify",
+  "name": "Glassify",
+  "version": "1.0.0",
+  "description": "Turns every pill, card and sheet on the lock screen into liquid glass: real refraction of the wallpaper through rounded edges, with no highlights or glare.",
+  "authors": [
+    {
+      "name": "binarylinuxx",
+      "url": "https://github.com/binarylinuxx"
+    }
+  ],
+  "license": "MIT",
+  "repository": "https://github.com/binarylinuxx/dots-plugins",
+  "tags": [
+    "lockscreen",
+    "glass",
+    "shader",
+    "theme"
+  ],
+  "previews": [
+    "thumbnail.svg"
+  ],
+  "project": "blxshell",
+  "blxshell": ">=0.1.0",
+  "compositors": [
+    "any"
+  ],
+  "plugin": {
+    "api": 2,
+    "facet": "plugin.facet",
+    "lockMaterial": {
+      "shader": "lib/glass.vws",
+      "params": [
+        {
+          "key": "refraction",
+          "default": 28
+        },
+        {
+          "key": "bezel",
+          "default": 22
+        },
+        {
+          "key": "magnify",
+          "default": 0.04
+        }
+      ]
+    },
+    "permissions": []
+  }
+}

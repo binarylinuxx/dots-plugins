@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="96" viewBox="0 0 800 96">
+  <rect width="800" height="96" fill="#0d0f0c"/>
+  <rect x="321" y="24" width="158" height="48" rx="24" fill="#1e201b"/>
+  <circle cx="351" cy="48" r="13" fill="none" stroke="#8d9286" stroke-opacity="0.35" stroke-width="3"/>
+  <path d="M 351 35 A 13 13 0 0 1 364 48" fill="none" stroke="#a8d08d" stroke-width="3" stroke-linecap="round"/>
+  <text x="375" y="54" font-family="Google Sans Flex, Rubik, sans-serif" font-size="18" font-weight="600" fill="#e2e3da">Glassify</text>
+</svg>

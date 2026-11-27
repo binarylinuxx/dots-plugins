@@ -1,0 +1,26 @@
+// Glassify: lib/glass.vws (shaders/glass.comp) draws the lock screen's
+// backdrops as glass; this is its page in Settings. The store keeps:
+// refraction, bezel, magnify.
+let [ vw.ui as ui, vw.layout as layout ] in
+
+view Settings(state, actions) {
+    let refraction = actions.get("refraction", 28)
+    let bezel = actions.get("bezel", 22)
+    let magnify = actions.get("magnify", 0.04)
+    layout.Column(gap: 16, width: state.width, align: start) {
+        ui.Text(text: "Every pill, card and the password sheet on the lock screen becomes glass. A sharp wallpaper (Settings → Lock screen → Blur the wallpaper off) shows the refraction best; Background in the layout editor sets how strongly each is tinted.",
+                font: state.fonts.text, size: 14, color: state.colours.textMuted, max_width: state.width)
+        ui.Text(text: "Refraction: " + refraction + " px", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-refraction", value: refraction, min: 0, max: 80, step: 1, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("refraction", value))
+        ui.Text(text: "Rounded edge: " + bezel + " px", font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-bezel", value: bezel, min: 4, max: 60, step: 1, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("bezel", value))
+        ui.Text(text: "Magnification: " + magnify, font: state.fonts.text, size: 15, color: state.colours.text)
+        ui.Slider(id: "glassify-magnify", value: magnify, min: 0, max: 0.2, step: 0.01, width: state.width,
+                  color: state.colours.primary, track_color: state.colours.surfaceContainerHighest,
+                  on_change: (value) => actions.set("magnify", value))
+    }
+}
