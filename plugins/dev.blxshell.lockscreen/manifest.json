@@ -4,7 +4,7 @@
   "type": "plugin",
   "id": "dev.blxshell.lockscreen",
   "name": "Lock screen widgets",
-  "version": "1.0.2",
+  "version": "1.1.0",
   "description": "A greeting, a message card, this month's calendar, a countdown and your machine's name and uptime, for the lock screen. Place and size them with the layout editor.",
   "authors": [
     {
@@ -34,6 +34,140 @@
     "native": "lib/plugin.so",
     "permissions": [
       "native"
-    ]
+    ],
+    "lockOptions": {
+      "LockGreeting": [
+        {
+          "key": "greeting_name",
+          "label": "Say your name",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "name",
+          "label": "Name",
+          "type": "text",
+          "default": "",
+          "placeholder": "Empty: from your account"
+        },
+        {
+          "key": "greeting_line",
+          "label": "Line under it",
+          "type": "text",
+          "default": "",
+          "placeholder": "Optional"
+        },
+        {
+          "key": "greeting_colour",
+          "label": "Colour",
+          "type": "colour",
+          "default": "text"
+        }
+      ],
+      "LockMessage": [
+        {
+          "key": "message_title",
+          "label": "Title",
+          "type": "text",
+          "default": "",
+          "placeholder": "e.g. If found"
+        },
+        {
+          "key": "message_body",
+          "label": "Message",
+          "type": "text",
+          "default": "",
+          "placeholder": "e.g. please call 555 0100"
+        },
+        {
+          "key": "message_glyph",
+          "label": "Icon",
+          "type": "choice",
+          "default": "info",
+          "choices": [
+            {
+              "value": "info",
+              "label": "Info"
+            },
+            {
+              "value": "call",
+              "label": "Call"
+            },
+            {
+              "value": "mail",
+              "label": "Mail"
+            },
+            {
+              "value": "favorite",
+              "label": "Heart"
+            },
+            {
+              "value": "home",
+              "label": "Home"
+            },
+            {
+              "value": "work",
+              "label": "Work"
+            },
+            {
+              "value": "warning",
+              "label": "Warning"
+            },
+            {
+              "value": "key",
+              "label": "Key"
+            }
+          ]
+        }
+      ],
+      "LockCalendar": [
+        {
+          "key": "week_start",
+          "label": "Weeks start on",
+          "type": "choice",
+          "default": "monday",
+          "choices": [
+            {
+              "value": "monday",
+              "label": "Monday"
+            },
+            {
+              "value": "sunday",
+              "label": "Sunday"
+            }
+          ]
+        }
+      ],
+      "LockCountdown": [
+        {
+          "key": "countdown_label",
+          "label": "Counting to",
+          "type": "text",
+          "default": "",
+          "placeholder": "e.g. holidays"
+        },
+        {
+          "key": "countdown_date",
+          "label": "Date",
+          "type": "text",
+          "default": "",
+          "placeholder": "YYYY-MM-DD"
+        }
+      ],
+      "LockSystem": [
+        {
+          "key": "system_uptime",
+          "label": "Uptime",
+          "type": "toggle",
+          "default": true
+        },
+        {
+          "key": "system_kernel",
+          "label": "Kernel version",
+          "type": "toggle",
+          "default": false
+        }
+      ]
+    }
   }
 }

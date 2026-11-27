@@ -8,8 +8,9 @@
 //   LockSystem     host name, uptime and kernel
 //
 // Each draws at the scale the user gave it (Host::context). On the lock screen
-// they are shown only, never clicked. plugin.facet is the settings page; the
-// store keys are listed there.
+// they are shown only, never clicked. Each widget's settings are its options
+// (manifest.json, lockOptions), set per widget in the layout editor, so two
+// message cards can say different things.
 #include <blxshell/plugin.hpp>
 #include <nlohmann/json.hpp>
 
@@ -37,14 +38,29 @@ json parse(std::string_view text) {
   return value.is_discarded() ? json(nullptr) : value;
 }
 
+// This widget's own value for an option (manifest.json, lockOptions), set in
+// the layout editor; null outside a lock widget.
+json option(const blxshell::Host& host, std::string_view key) {
+  const json context = parse(host.context());
+  if (context.is_object() && context.contains("lock") && context["lock"].contains("options")) {
+    const json& options = context["lock"]["options"];
+    if (options.is_object() && options.contains(key)) return options[std::string(key)];
+  }
+  return nullptr;
+}
+
+// A setting: the widget's option, else (for text left empty) what 1.0 kept in
+// the store from its Settings page, else the fallback.
 std::string text_of(const blxshell::Host& host, std::string_view key, std::string fallback = {}) {
-  const json value = parse(host.get(key));
-  return value.is_string() ? value.get<std::string>() : fallback;
+  if (const json own = option(host, key); own.is_string() && !own.get<std::string>().empty()) return own.get<std::string>();
+  const json stored = parse(host.get(key));
+  return stored.is_string() && !stored.get<std::string>().empty() ? stored.get<std::string>() : fallback;
 }
 
 bool flag_of(const blxshell::Host& host, std::string_view key, bool fallback) {
-  const json value = parse(host.get(key));
-  return value.is_boolean() ? value.get<bool>() : fallback;
+  if (const json own = option(host, key); own.is_boolean()) return own.get<bool>();
+  const json stored = parse(host.get(key));
+  return stored.is_boolean() ? stored.get<bool>() : fallback;
 }
 
 // The size the user gave the widget in the layout editor.

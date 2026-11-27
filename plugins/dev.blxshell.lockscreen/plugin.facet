@@ -1,87 +1,13 @@
 // Lock screen widgets: lib/plugin.so (src/plugin.cpp) draws the widgets; this
-// file is its page in Settings. The store keeps: name, greeting_name,
-// greeting_line, greeting_colour, message_title, message_body, message_glyph,
-// week_start, countdown_label, countdown_date, system_uptime, system_kernel.
+// is its page in Settings. Each widget's own settings (manifest.json,
+// lockOptions) are in the lock screen layout editor.
 let [ vw.ui as ui, vw.layout as layout ] in
 
 view Settings(state, actions) {
-    layout.Column(gap: 16, width: state.width, align: start) {
-        ui.Text(text: "Place the widgets with Settings → Lock screen → Edit layout, then Add.",
-                font: state.fonts.text, size: 14, color: state.colours.textMuted)
-
-        ui.Text(text: "Greeting", font: state.fonts.display, size: 18, color: state.colours.primary)
-        layout.Row(gap: 12, width: state.width, justify: space-between) {
-            ui.Text(text: "Say your name", font: state.fonts.text, size: 15, color: state.colours.text)
-            ui.Toggle(id: "lockscreen-greeting-name", value: actions.get("greeting_name", true), color: state.colours.primary,
-                      on_change: (on) => actions.set("greeting_name", on))
-        }
-        ui.TextField(id: "lockscreen-name", value: actions.get("name", ""), placeholder: "Name (empty: from your account)",
-                     width: state.width, height: 42, radius: 14,
-                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
-                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
-                     on_change: (text) => actions.set("name", text))
-        ui.TextField(id: "lockscreen-line", value: actions.get("greeting_line", ""), placeholder: "A line under it (optional)",
-                     width: state.width, height: 42, radius: 14,
-                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
-                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
-                     on_change: (text) => actions.set("greeting_line", text))
-        layout.Row(gap: 12, width: state.width, justify: space-between) {
-            ui.Text(text: "Colour", font: state.fonts.text, size: 15, color: state.colours.text)
-            ui.Dropdown(id: "lockscreen-greeting-colour", options: ["text", "primary", "secondary", "tertiary", "textMuted"],
-                        value: actions.get("greeting_colour", "text"), width: 180,
-                        color: state.colours.surfaceContainerHighest, text_color: state.colours.text,
-                        on_change: (picked) => actions.set("greeting_colour", picked))
-        }
-
-        ui.Text(text: "Message", font: state.fonts.display, size: 18, color: state.colours.primary)
-        ui.TextField(id: "lockscreen-message-title", value: actions.get("message_title", ""), placeholder: "Title, e.g. If found",
-                     width: state.width, height: 42, radius: 14,
-                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
-                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
-                     on_change: (text) => actions.set("message_title", text))
-        ui.TextField(id: "lockscreen-message-body", value: actions.get("message_body", ""), placeholder: "Message, e.g. please call 555 0100",
-                     width: state.width, height: 42, radius: 14,
-                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
-                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
-                     on_change: (text) => actions.set("message_body", text))
-        layout.Row(gap: 12, width: state.width, justify: space-between) {
-            ui.Text(text: "Icon", font: state.fonts.text, size: 15, color: state.colours.text)
-            ui.Dropdown(id: "lockscreen-message-glyph", options: ["info", "call", "mail", "favorite", "home", "work", "warning", "key"],
-                        value: actions.get("message_glyph", "info"), width: 180,
-                        color: state.colours.surfaceContainerHighest, text_color: state.colours.text,
-                        on_change: (picked) => actions.set("message_glyph", picked))
-        }
-
-        ui.Text(text: "Calendar", font: state.fonts.display, size: 18, color: state.colours.primary)
-        layout.Row(gap: 12, width: state.width, justify: space-between) {
-            ui.Text(text: "Weeks start on", font: state.fonts.text, size: 15, color: state.colours.text)
-            ui.Dropdown(id: "lockscreen-week", options: ["monday", "sunday"], value: actions.get("week_start", "monday"), width: 180,
-                        color: state.colours.surfaceContainerHighest, text_color: state.colours.text,
-                        on_change: (picked) => actions.set("week_start", picked))
-        }
-
-        ui.Text(text: "Countdown", font: state.fonts.display, size: 18, color: state.colours.primary)
-        ui.TextField(id: "lockscreen-countdown-label", value: actions.get("countdown_label", ""), placeholder: "What, e.g. holidays",
-                     width: state.width, height: 42, radius: 14,
-                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
-                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
-                     on_change: (text) => actions.set("countdown_label", text))
-        ui.TextField(id: "lockscreen-countdown-date", value: actions.get("countdown_date", ""), placeholder: "When, as YYYY-MM-DD",
-                     width: state.width, height: 42, radius: 14,
-                     color: state.colours.surfaceContainerHighest, focus_color: state.colours.primary,
-                     text_color: state.colours.text, placeholder_color: state.colours.textMuted, font: state.fonts.text,
-                     on_change: (text) => actions.set("countdown_date", text))
-
-        ui.Text(text: "System", font: state.fonts.display, size: 18, color: state.colours.primary)
-        layout.Row(gap: 12, width: state.width, justify: space-between) {
-            ui.Text(text: "Uptime", font: state.fonts.text, size: 15, color: state.colours.text)
-            ui.Toggle(id: "lockscreen-uptime", value: actions.get("system_uptime", true), color: state.colours.primary,
-                      on_change: (on) => actions.set("system_uptime", on))
-        }
-        layout.Row(gap: 12, width: state.width, justify: space-between) {
-            ui.Text(text: "Kernel version", font: state.fonts.text, size: 15, color: state.colours.text)
-            ui.Toggle(id: "lockscreen-kernel", value: actions.get("system_kernel", false), color: state.colours.primary,
-                      on_change: (on) => actions.set("system_kernel", on))
-        }
+    layout.Column(gap: 12, width: state.width, align: start) {
+        ui.Text(text: "Add the widgets in Settings → Lock screen → Edit layout → Add. Select one there to set what it shows: the greeting's name and colour, the message and its icon, the calendar's first weekday, the countdown's date, the system line's parts.",
+                font: state.fonts.text, size: 15, color: state.colours.text, max_width: state.width)
+        ui.Text(text: "Add a widget twice, or duplicate it, for two with different settings: a message card for your contact details and one for a reminder.",
+                font: state.fonts.text, size: 14, color: state.colours.textMuted, max_width: state.width)
     }
 }

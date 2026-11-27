@@ -11,10 +11,12 @@ layout editor: **Settings → Lock screen → Edit layout**, then **Add**.
 | Countdown | Days until a date (or since it, once it has passed) |
 | System | The machine's name, its uptime and, if you like, the kernel |
 
-**Settings → Plugins → Lock screen widgets** sets the name (empty takes the
-first name from your account), the greeting's colour, the message and its
-icon, the first day of the week, the countdown's date (`YYYY-MM-DD`) and what
-it counts to, and whether to show uptime and the kernel.
+Select a widget in the layout editor to set what it shows. The greeting has
+your name (empty takes it from your account), a line under it and its colour.
+The message has a title, text and icon. The calendar has the first day of the
+week, the countdown its date (`YYYY-MM-DD`) and what it counts to, and the
+system line has uptime and the kernel. Add a widget twice, or duplicate it
+(Ctrl+D), for two with different settings.
 
 Their **Background** slider in the editor sets how solid the card behind them is (100% hides the wallpaper). They take the backdrop colour picked in the editor or in Settings → Lock screen. With a lock material installed (such as Glassify), the cards are drawn in it too. The widgets are shown only. A locked session takes no clicks from a plugin.
 They don't appear on the login screen, which runs no plugins.
