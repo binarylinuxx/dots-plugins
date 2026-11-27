@@ -55,6 +55,18 @@ float scale_of(const blxshell::Host& host) {
   return 1;
 }
 
+// The backdrop's opacity the user set in the layout editor (100% solid), or
+// this widget's own when automatic.
+float backdrop(const blxshell::Host& host, float base) {
+  const json context = parse(host.context());
+  if (context.is_object() && context.contains("lock") && context["lock"].contains("background") &&
+      context["lock"]["background"].is_number()) {
+    const float set = context["lock"]["background"].get<float>();
+    if (set >= 0) return std::min(set, 1.0F);
+  }
+  return base;
+}
+
 bool editing(const blxshell::Host& host) {
   const json context = parse(host.context());
   return context.is_object() && context.contains("lock") && context["lock"].value("editing", false);
@@ -158,7 +170,7 @@ vw::Widget message(vw::Ui& ui, blxshell::Host& host) {
     body = "Write it in Settings → Plugins → Lock screen widgets";
   }
   const std::string icon = text_of(host, "message_glyph", "info");
-  return card(ui, alpha(host.colour("surfaceContainerHigh"), 0.88F), 26 * k, 18 * k, [&] {
+  return card(ui, alpha(host.colour("surfaceContainerHigh"), backdrop(host, 0.88F)), 26 * k, 18 * k, [&] {
     // vw lays out in build order: the badge first, then the words.
     const vw::Widget badge = card(ui, host.colour("primaryContainer"), 20 * k, 9 * k,
                                   [&] { return glyph(ui, host, icon, 22 * k, host.colour("primary")); });
@@ -197,7 +209,7 @@ vw::Widget calendar(vw::Ui& ui, blxshell::Host& host) {
   const auto centred = [&](vw::Widget inside) {
     return ui.row({inside}, {.width = cell, .height = cell, .justify = vw::Justify::center, .align = vw::Align::center});
   };
-  return card(ui, alpha(host.colour("surfaceContainerHigh"), 0.88F), 28 * k, 16 * k, [&] {
+  return card(ui, alpha(host.colour("surfaceContainerHigh"), backdrop(host, 0.88F)), 28 * k, 16 * k, [&] {
     std::vector<vw::Widget> rows;
     rows.push_back(label(ui, std::format("{} {}", months[month], year),
                          {.font = host.font("display"), .size = 16 * k, .weight = vw::weight::semibold,
@@ -265,7 +277,7 @@ vw::Widget countdown(vw::Ui& ui, blxshell::Host& host) {
   const std::string words = *days == 0 ? event
                             : *days > 0 ? std::format("{} until {}", count == 1 ? "day" : "days", event)
                                         : std::format("{} since {}", count == 1 ? "day" : "days", event);
-  return card(ui, alpha(host.colour("surfaceContainerHigh"), 0.88F), 26 * k, 16 * k, [&] {
+  return card(ui, alpha(host.colour("surfaceContainerHigh"), backdrop(host, 0.88F)), 26 * k, 16 * k, [&] {
     const vw::Widget big = label(ui, number, {.font = host.font("display"), .size = 40 * k, .weight = vw::weight::black,
                                               .colour = host.colour("primary")});
     const vw::Widget small = label(ui, words, {.font = host.font("text"), .size = 14 * k, .weight = vw::weight::medium,
@@ -294,7 +306,7 @@ vw::Widget system_line(vw::Ui& ui, blxshell::Host& host) {
   std::vector<Part> parts{{"computer", names.nodename}};
   if (flag_of(host, "system_uptime", true)) parts.push_back({"schedule", uptime()});
   if (flag_of(host, "system_kernel", false)) parts.push_back({"memory", names.release});
-  return card(ui, alpha(host.colour("surfaceContainerHigh"), 0.78F), 22 * k, 11 * k, [&] {
+  return card(ui, alpha(host.colour("surfaceContainerHigh"), backdrop(host, 0.78F)), 22 * k, 11 * k, [&] {
     std::vector<vw::Widget> items;
     for (const Part& part : parts) {
       if (part.text.empty()) continue;
